@@ -1,0 +1,157 @@
+/* 
+ * Recipe Actions 样式文件
+ * 包含语音按钮和操作相关样式
+ */
+
+/* 语音朗读按钮和图片生成按钮容器 */
+.recipe-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    position: relative;
+    padding: 0 15px;
+}
+
+/* 语音朗读按钮样式 */
+#voice-reader-btn {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 25px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+
+#voice-reader-btn:hover {
+    background-color: #e85a2a;
+    transform: translateY(-2px);
+}
+
+#voice-reader-btn i {
+    margin-right: 8px;
+    font-size: 1.1rem;
+}
+
+/* 操作按钮通用样式 */
+.action-btn {
+    background-color: white;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    padding: 10px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.action-btn i {
+    margin-right: 8px;
+    font-size: 1.1rem;
+}
+
+/* 语音按钮激活状态 */
+.reading-active {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    animation: pulse 2s infinite;
+    position: relative;
+}
+
+.reading-active::after {
+    content: '';
+    display: block;
+    width: 10px;
+    height: 10px;
+    background-color: #ff6b35;
+    border-radius: 50%;
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    animation: pulse 1.5s infinite;
+}
+
+/* 语速选择器 */
+.speed-selector {
+    position: absolute;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    z-index: 100;
+    margin-top: 5px;
+    right: 20px;
+}
+
+.speed-options {
+    display: flex;
+    gap: 5px;
+}
+
+.speed-btn {
+    border: 1px solid #ddd;
+    background: #f5f5f5;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.speed-btn:hover {
+    background: #eaeaea;
+}
+
+.speed-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    #voice-reader-btn {
+        padding: 8px 20px;
+        font-size: 14px;
+    }
+    
+    .speed-selector {
+        right: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    #voice-reader-btn {
+        padding: 6px 15px;
+        font-size: 13px;
+    }
+    
+    #voice-reader-btn i {
+        font-size: 1rem;
+    }
+    
+    .speed-options {
+        flex-direction: column;
+        gap: 3px;
+    }
+} 

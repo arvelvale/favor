@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flavor Fusion - 会员管理</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <style>
+        .card {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            color: white;
+            padding: 20px;
+        }
+        .stat-card .card-title {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .stat-card .card-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-card .card-trend {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        .stat-card.monthly {
+            background: linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%);
+        }
+        .stat-card.annual {
+            background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        }
+        .stat-card.revenue {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .stat-card.expire {
+            background: linear-gradient(135deg, #ec4899 0%, #d946ef 100%);
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .search-bar {
+            max-width: 300px;
+        }
+        .chart-container {
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-2 bg-dark sidebar">
+                <div class="sidebar-heading d-flex align-items-center px-3 mt-4 mb-4">
+                    <i class="fas fa-utensils me-2 text-light"></i>
+                    <span class="text-light fs-4">Flavor Fusion</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="/admin/dashboard" class="list-group-item list-group-item-action bg-dark text-light">
+                        <i class="fas fa-tachometer-alt me-2"></i> 控制面板
+                    </a>
+                    <a href="/admin/users" class="list-group-item list-group-item-action bg-dark text-light">
+                        <i class="fas fa-users me-2"></i> 用户管理
+                    </a>
+                    <a href="/admin/members" class="list-group-item list-group-item-action bg-dark text-light active">
+                        <i class="fas fa-crown me-2"></i> 会员管理
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-dark text-light">
+                        <i class="fas fa-cog me-2"></i> 系统设置
+                    </a>
+                    <a href="/" class="list-group-item list-group-item-action bg-dark text-light">
+                        <i class="fas fa-home me-2"></i> 返回首页
+                    </a>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="col-md-10 ms-sm-auto main-content">
+                <!-- 顶部导航 -->
+                <div class="row mb-4 border-bottom py-3">
+                    <div class="col d-flex justify-content-between align-items-center">
+                        <h3>会员管理</h3>
+                        <div class="admin-info d-flex align-items-center">
+                            <span class="me-3">管理员：Flavor</span>
+                            <a href="/admin/logout" class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-sign-out-alt me-1"></i>退出
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i> {{ error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
+                <!-- 会员统计卡片 -->
+                <div class="row g-4 mb-4">
+                    <!-- 会员总数 -->
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-title">会员总数</div>
+                            <div class="card-value">{{ stats.total_members }}</div>
+                            <div class="card-trend">
+                                <i class="fas fa-users trend-icon"></i>
+                                活跃会员人数
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 月度会员 -->
+                    <div class="col-md-3">
+                        <div class="card stat-card monthly">
+                            <div class="card-title">月度会员</div>
+                            <div class="card-value">{{ stats.monthly_members }}</div>
+                            <div class="card-trend">
+                                <i class="fas fa-calendar-alt trend-icon"></i>
+                                每月 $7.90
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 年度会员 -->
+                    <div class="col-md-3">
+                        <div class="card stat-card annual">
+                            <div class="card-title">年度会员</div>
+                            <div class="card-value">{{ stats.annual_members }}</div>
+                            <div class="card-trend">
+                                <i class="fas fa-calendar-check trend-icon"></i>
+                                每年 $79.90
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 收入统计 -->
+                    <div class="col-md-3">
+                        <div class="card stat-card revenue">
+                            <div class="card-title">总收入</div>
+                            <div class="card-value">${{ "%.2f"|format(stats.total_revenue) }}</div>
+                            <div class="card-trend">
+                                <i class="fas fa-dollar-sign trend-icon"></i>
+                                会员订阅收入
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 会员管理功能区 -->
+                <div class="card mb-4">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div class="search-bar">
+                            <div class="input-group">
+                                <input type="text" id="memberSearch" class="form-control" placeholder="搜索会员...">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="badge bg-warning text-dark me-2">
+                                <i class="fas fa-clock me-1"></i>即将到期：{{ stats.expiring_soon }}
+                            </span>
+                            <a href="#" class="btn btn-primary">
+                                <i class="fas fa-crown me-1"></i>添加会员
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最近订阅 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">最近订阅</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>用户</th>
+                                        <th>订阅类型</th>
+                                        <th>开始日期</th>
+                                        <th>结束日期</th>
+                                        <th>金额</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for sub in subscriptions %}
+                                    <tr>
+                                        <td class="d-flex align-items-center">
+                                            <img src="/api/avatar/{{ sub.user_id }}?v={{ timestamp }}" alt="用户头像" class="user-avatar me-2">
+                                            {{ sub.username }}
+                                        </td>
+                                        <td>
+                                            {% if sub.plan_type == 'monthly' %}
+                                            <span class="badge bg-primary">月度会员</span>
+                                            {% elif sub.plan_type == 'annual' %}
+                                            <span class="badge bg-success">年度会员</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">{{ sub.plan_type }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ sub.start_date }}</td>
+                                        <td>{{ sub.end_date }}</td>
+                                        <td>${{ "%.2f"|format(sub.amount) }}</td>
+                                        <td>
+                                            {% if sub.is_active %}
+                                            <span class="badge bg-success">有效</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">已过期</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="/admin/user/{{ sub.user_id }}" class="btn btn-sm btn-info text-white">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <button class="btn btn-sm btn-warning text-white">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-3">暂无订阅数据</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 会员趋势图 -->
+                <div class="card">
+                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">会员趋势</h5>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary active">本月</button>
+                            <button type="button" class="btn btn-outline-secondary">本季度</button>
+                            <button type="button" class="btn btn-outline-secondary">全年</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="memberChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // 表格搜索功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('memberSearch');
+            if (searchInput) {
+                searchInput.addEventListener('keyup', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    const tableRows = document.querySelectorAll('tbody tr');
+                    
+                    tableRows.forEach(row => {
+                        const text = row.textContent.toLowerCase();
+                        if (text.includes(searchTerm)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                });
+            }
+            
+            // 会员趋势图
+            var ctx = document.getElementById('memberChart').getContext('2d');
+            var memberChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+                    datasets: [{
+                        label: '月度会员',
+                        data: [15, 20, 25, 30, 35, 45, 50, 60, 65, 68, 72, {{ stats.monthly_members }}],
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: '年度会员',
+                        data: [5, 7, 9, 12, 15, 18, 22, 25, 29, 32, 35, {{ stats.annual_members }}],
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

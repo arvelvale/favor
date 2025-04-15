@@ -1,0 +1,210 @@
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nav-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    cursor: pointer;
+    border: 2px solid #ff6b35;
+    transition: border-color 0.3s;
+}
+
+.nav-avatar:hover {
+    border-color: #e85a2c;
+}
+
+.welcome-text {
+    color: #333;
+    font-weight: 500;
+}
+
+/* 使用限制信息样式 */
+.usage-info {
+    margin: 15px 0;
+    padding: 12px 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #ff6b35;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.usage-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.usage-text {
+    color: #555;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.usage-text i {
+    color: #ff6b35;
+    margin-right: 5px;
+}
+
+.premium-link {
+    background-color: #ff6b35;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.3s, transform 0.2s;
+    white-space: nowrap;
+    margin-left: 15px;
+}
+
+.premium-link:hover {
+    background-color: #e85a2c;
+    transform: translateY(-2px);
+    color: white;
+    text-decoration: none;
+}
+
+.premium-link i {
+    margin-right: 5px;
+}
+
+/* 当用户已经达到限制时的样式 */
+.usage-limit-reached {
+    background-color: #fff8f6;
+    border-color: #ff3b00;
+}
+
+.usage-limit-reached .usage-text {
+    color: #d83600;
+    font-weight: 500;
+}
+
+/* 限制达到时的错误消息样式 */
+.limit-reached-message {
+    background-color: #fff8f6;
+    border: 1px solid #ffccc7;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.15);
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.limit-reached-message p {
+    margin-bottom: 10px;
+    color: #d83600;
+    font-weight: 500;
+}
+
+.limit-reached-message .premium-link {
+    display: inline-block;
+    margin-top: 10px;
+    background-color: #ffc107;
+    color: #7d4614;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.limit-reached-message .premium-link:hover {
+    background-color: #ffb300;
+    transform: translateY(-2px);
+}
+
+/* 限制通知样式 */
+.limit-notification {
+    background-color: #fff8f6;
+    border-left: 4px solid #ff3b00;
+    padding: 10px 15px;
+    margin-top: 15px;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #d83600;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.limit-notification i {
+    margin-right: 5px;
+}
+
+.limit-notification a {
+    color: #ff6b35;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.limit-notification a:hover {
+    color: #e85a2c;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 会员徽章样式 */
+.premium-badge {
+    background-color: #ffc107;
+    color: #7d4614;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    animation: premium-glow 1.5s infinite alternate;
+    box-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
+}
+
+.premium-badge i {
+    margin-right: 4px;
+    font-size: 10px;
+}
+
+@keyframes premium-glow {
+    from {
+        box-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
+    }
+    to {
+        box-shadow: 0 0 8px rgba(255, 193, 7, 0.8);
+    }
+}
+
+/* 头像会员边框 */
+.premium-user .user-avatar {
+    border: 2px solid #ffc107;
+    box-shadow: 0 0 8px rgba(255, 193, 7, 0.6);
+}
+
+/* 高级会员信息显示 */
+.premium-user-info {
+    background-color: #fff8e6;
+    border-left: 4px solid #ffc107;
+    border-radius: 8px;
+    padding: 12px 15px;
+}
+
+.premium-user-info .usage-text {
+    color: #7d4614;
+}
+
+.premium-user-info .usage-text i {
+    color: #ffc107;
+}

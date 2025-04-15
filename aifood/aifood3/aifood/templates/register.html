@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Flavor Fusion</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/auth.css">
+</head>
+<body>
+    <div class="auth-container">
+        <!-- Left Brand Section -->
+        <div class="brand-section">
+            <div class="brand-overlay"></div>
+            <div class="brand-content">
+                <h1 class="brand-logo">Flavor Fusion</h1>
+                <p class="brand-tagline">Join Our Community, Begin Your Culinary Journey</p>
+                <div class="brand-features">
+                    <div class="feature-item">
+                        <i class="fas fa-utensils"></i>
+                        <span>AI-powered Recipe Generation</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-save"></i>
+                        <span>Save Your Favorite Recipes</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>Access Anywhere, Anytime</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Form Section -->
+        <div class="form-section">
+            <div class="form-container">
+                <a href="/" class="back-to-home">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+                
+                <h2 class="form-title">Create Your Account</h2>
+                
+                <div class="tabs">
+                    <div class="tab" onclick="location.href='/login'">Login</div>
+                    <div class="tab active">Register</div>
+                </div>
+                
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="username" name="username" placeholder="Choose a username" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <div class="input-with-button">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-envelope"></i>
+                                <input type="email" id="email" name="email" placeholder="Enter your email address" required>
+                            </div>
+                            <button type="button" id="get-code-btn" class="btn-get-code">Get Code</button>
+                        </div>
+                        <div id="email-feedback" class="feedback-message"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="verification-code">Verification Code</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-key"></i>
+                            <input type="text" id="verification-code" name="verification_code" placeholder="Enter verification code" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="password" name="password" placeholder="Create a password" required>
+                        </div>
+                        <div class="password-requirements">
+                            Password must be at least 8 characters and include numbers, letters, and special characters (@#!%^&*;'":,.?/)
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirm-password">Confirm Password</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="confirm-password" name="confirm_password" placeholder="Confirm your password" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group terms">
+                        <input type="checkbox" id="terms" name="terms" required>
+                        <div class="terms-text">
+                            <label for="terms">By registering, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit">
+                        <span class="btn-text">Register</span>
+                        <span class="btn-loader"><i class="fas fa-spinner fa-spin"></i></span>
+                    </button>
+                    
+                    <div id="error-message" class="error-message"></div>
+                    <div id="success-message" class="success-message"></div>
+                    
+                    <div class="social-login">
+                        <p class="social-text">Or register with</p>
+                        <div class="social-buttons">
+                            <button type="button" class="social-btn google-btn">
+                                <i class="fab fa-google"></i>
+                                <span>Google</span>
+                            </button>
+                            <button type="button" class="social-btn apple-btn">
+                                <i class="fab fa-apple"></i>
+                                <span>Apple</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="redirect-prompt">
+                        <p>Already have an account? <a href="/login">Login here</a></p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+</body>
+</html>

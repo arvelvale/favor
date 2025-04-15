@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Flavor Fusion</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/auth.css">
+</head>
+<body>
+    <div class="auth-container">
+        <!-- Left Brand Section -->
+        <div class="brand-section">
+            <div class="brand-overlay"></div>
+            <div class="brand-content">
+                <h1 class="brand-logo">Flavor Fusion</h1>
+                <p class="brand-tagline">Smart Cooking, Delicious Results</p>
+                <div class="brand-features">
+                    <div class="feature-item">
+                        <i class="fas fa-utensils"></i>
+                        <span>AI-powered Recipe Generation</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-save"></i>
+                        <span>Save Your Favorite Recipes</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>Access Anywhere, Anytime</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Form Section -->
+        <div class="form-section">
+            <div class="form-container">
+                <a href="/" class="back-to-home">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+                
+                <h2 class="form-title">Login to Flavor Fusion</h2>
+                
+                <div class="tabs">
+                    <div class="tab active">Login</div>
+                    <div class="tab" onclick="location.href='/register'">Register</div>
+                </div>
+                
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">username </label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="username" name="username" placeholder="Enter your username or email" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group options-row">
+                        <div class="remember-me">
+                            <input type="checkbox" id="remember" name="remember">
+                            <label for="remember">Remember me</label>
+                        </div>
+                        <a href="/verification-login" class="forgot-password">Forgot password?</a>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit">
+                        <span class="btn-text">Login</span>
+                        <span class="btn-loader"><i class="fas fa-spinner fa-spin"></i></span>
+                    </button>
+                    
+                    <div id="error-message" class="error-message"></div>
+                    
+                    <div class="social-login">
+                        <p class="social-text">Or login with</p>
+                        <div class="social-buttons">
+                            <button type="button" class="social-btn google-btn">
+                                <i class="fab fa-google"></i>
+                                <span>Google</span>
+                            </button>
+                            <button type="button" class="social-btn apple-btn">
+                                <i class="fab fa-apple"></i>
+                                <span>Apple</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="redirect-prompt">
+                        <p>Don't have an account? <a href="/register">Register now</a></p>
+                    </div>
+                    
+                    <div class="redirect-prompt">
+                        <p>Login with verification code? <a href="/verification-login">Verification login</a></p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+</body>
+</html>

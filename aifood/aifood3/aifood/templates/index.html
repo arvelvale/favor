@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flavor Fusion: Create Magic with Your Ingredients</title>
+    <!-- 更新 Font Awesome 链接，确保包含厨师帽图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/recipe-actions.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style-recipe-images.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="/static/css/main-container.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Flavor Fusion</h1>
+        <p>Create Magic with Your Ingredients</p>
+        
+        <div class="user-nav">
+            {% if session.get('user_id') %}
+                <div class="user-info">
+                    <span>Welcome, {{ session.get('username') }}</span>
+                    <!-- 添加会员徽章 - 只在用户是会员时显示 -->
+                    <div id="premiumBadge" class="premium-badge" style="display: none;">
+                        <i class="fas fa-crown"></i> Premium
+                    </div>
+                    <!-- 添加用户头像 -->
+                    <div class="avatar-container" onclick="window.location.href='/profile'">
+                        <div class="user-avatar" 
+                             {% if user_id %}
+                             style="background-image: url('/api/avatar/{{ user_id }}?v={{ timestamp }}');"
+                             {% else %}
+                             style="background-image: url('/static/images/default-avatar.png');"
+                             {% endif %}>
+                        </div>
+                    </div>
+                    <div class="user-dropdown">
+                        <a href="/my-recipes"><i class="fas fa-book"></i> My Recipes</a>
+                        <a href="/premium"><i class="fas fa-crown"></i> Premium</a>
+                        <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="auth-links">
+                    <a href="/login" class="auth-btn login-btn"><i class="fas fa-sign-in-alt"></i> Login</a>
+                    <a href="/register" class="auth-btn register-btn"><i class="fas fa-user-plus"></i> Register</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <!-- Show recipe history option if logged in -->
+        {% if session.get('user_id') %}
+        <div class="user-actions">
+            <a href="/my-recipes" class="history-btn"><i class="fas fa-history"></i> View Recipe History</a>
+        </div>
+        {% endif %}
+        
+        <div class="control-panel">
+            <!-- Language selector removed -->
+            
+            <div class="mode-selector">
+                <div class="selector-title">Recipe Mode</div>
+                <div class="radio-option">
+                    <input type="radio" id="mode-partial" name="mode" value="partial" checked>
+                    <label for="mode-partial">Some Ingredients: Let's get creative!</label>
+                </div>
+                <div class="radio-option">
+                    <input type="radio" id="mode-all" name="mode" value="all">
+                    <label for="mode-all">All Ingredients: Use ONLY these exact ingredients</label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="ingredient-input">
+            <div class="input-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="ingredientInput" placeholder="What's in your fridge? Start typing...">
+            </div>
+            <div class="suggestions" id="suggestions"></div>
+        </div>
+        
+        <div class="selected-ingredients" id="selectedIngredients"></div>
+        
+        <div class="action-button">
+            <button id="generateBtn">
+                <i class="fas fa-utensils"></i>
+                Create Recipe
+            </button>
+        </div>
+        
+        <div class="loading" id="loading" style="display: none;">
+            <i class="fas fa-spinner"></i>
+            Cooking up something delicious...
+        </div>
+        
+        <div class="recipe-container">
+            <div class="recipe-header">
+                <i class="fas fa-hat-chef"></i>
+                Recommended for you
+                {% if session.get('user_id') %}
+                <button id="saveRecipeBtn" style="display: none;" class="save-recipe-btn">
+                    <i class="fas fa-save"></i> Save this Recipe
+                </button>
+                {% endif %}
+            </div>
+            <div class="recipe-result" id="recipeResult">
+                <div class="empty-recipe">
+                    Add ingredients and click "Create Recipe" to see magic happen!
+                </div>
+            </div>
+            
+            <!-- 调整后的语音朗读按钮位置 -->
+            <div class="recipe-actions">
+                <button id="voice-reader-btn" style="display: none;"><i class="fas fa-volume-up"></i> Read Recipe</button>
+            </div>
+            
+            <!-- 语速选择弹出层 -->
+            <div id="speed-selector" class="speed-selector hidden">
+                <div class="speed-options">
+                    <button class="speed-btn" data-rate="0.8">慢速</button>
+                    <button class="speed-btn active" data-rate="1">标准</button>
+                    <button class="speed-btn" data-rate="1.3">快速</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tips">
+            <h3>Tips & Tricks</h3>
+            <ul>
+                <li>Add more ingredients for better, more specific recipes</li>
+                <li>Try different combinations to discover new dishes</li>
+                <li>Use the "All Ingredients" mode when you want to use everything listed</li>
+                <li>Explore international cuisines by adding regional ingredients</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Flavor Fusion - Your personal AI chef</p>
+        <p><a href="/feedback" class="footer-link">Send Feedback</a></p>
+        <p class="copyright">© 2023 Flavor Fusion. All rights reserved.</p>
+    </div>
+    
+    <!-- 加载toast消息组件 -->
+    <link rel="stylesheet" href="{{ get_toast_files().css }}">
+    <script src="{{ get_toast_files().js }}"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="{{ url_for('static', filename='js/voice-reader.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
+<!-- 在主要控制面板下方添加 -->
+<!-- 使用限制信息区域 -->
+<div class="usage-info" id="usageInfo" style="display: none;">
+    <div class="usage-container" style="text-align: center;">
+        <span class="usage-text">
+            <i class="fas fa-info-circle"></i> 
+            <span id="usageMessage">Loading usage information...</span>
+        </span>
+        <a href="/premium" class="premium-link" id="upgradeToPremium" style="display: none;">
+            <i class="fas fa-crown"></i> Upgrade to Premium
+        </a>
+    </div>
+</div>
+    
+    <!-- 食谱生成区域 -->
+</div>

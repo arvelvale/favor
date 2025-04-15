@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - Flavor Fusion</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/toast-message.css') }}">
+    <style>
+        /* Reset and Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        /* Navigation Bar */
+        .navbar {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .brand {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+        
+        .brand-logo {
+            height: 40px;
+            margin-right: 10px;
+        }
+        
+        .brand-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff6b35;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 25px;
+        }
+        
+        .nav-links a {
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover {
+            color: #ff6b35;
+        }
+        
+        /* User Menu */
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .welcome-text {
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .nav-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjY2NjY2NjIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiI+PC9wYXRoPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCIgZmlsbD0iI2VlZWVlZSI+PC9jaXJjbGU+PC9zdmc+");
+            background-color: white;
+            background-size: cover;
+            cursor: pointer;
+            border: 2px solid #ff6b35;
+            transition: border-color 0.3s;
+        }
+        
+        .nav-avatar:hover {
+            border-color: #e85a2c;
+        }
+
+        /* Profile Styles */
+        .profile-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .avatar-section {
+            position: relative;
+            margin-right: 30px;
+        }
+
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjY2NjY2NjIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiI+PC9wYXRoPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCIgZmlsbD0iI2VlZWVlZSI+PC9jaXJjbGU+PC9zdmc+");
+            background-color: white;
+            background-size: cover;
+            border: 3px solid #ff6b35;
+        }
+
+        .avatar-upload {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #ff6b35;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .avatar-upload i {
+            color: white;
+            font-size: 20px;
+        }
+
+        .profile-info {
+            flex-grow: 1;
+        }
+
+        .profile-form {
+            display: grid;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .save-button {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .save-button:hover {
+            background: #e85a2c;
+        }
+
+        #avatarInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBmaWxsPSIjZmY2YjM1Ij48cGF0aCBkPSJNMTQ5LjMzIDM0LjY3Yy00Mi4zIDAtNzEuMTMgMzQuNjYtODUuMzMgNjkuMzMtMTQuMiAzNC42Ny0xNC4yIDY5LjM0IDAgMTA0IDMuNTUgOC42NyA4LjA1IDE2LjY4IDEzLjMzIDI0SDY0Yy0zNS4zIDAtNjQgMjguNy02NCA2NHYxNzYuNEMwIDQ5MC41IDIxLjUgNTEyIDQ4IDUxMmgzMjBjMjYuNSAwIDQ4LTIxLjUgNDgtNDhWMzIwaDE2YzUzIDAgOTYtNDMgOTYtOTZzLTQzLTk2LTk2LTk2aC0xNnYtNDhjMC0yNi41LTIxLjUtNDgtNDgtNDhoLTgwLjY3YzUuMjgtNy4zMyA5Ljc4LTE1LjM0IDEzLjMzLTI0IDE0LjItMzQuNjYgMTQuMi02OS4zMyAwLTEwNGMtMTQuMi0zNC42Ny00My0zNi0wMy02OS4zMy00Mi4zIDAtNzEuMTMgMzQuNjYtODUuMzMgNjkuMzN6bS01LjMzIDkyLjkzYzEwLjEtMjQuNyAyMy04MCAxMC02OS4zIDEwLjEtMjQuNyAyOC05MC4zIDQwLTY5LjMgMTAuMSAyNC43IDEwLjEgNzIuOS0wIDE2Mi42LTUuMSAxMi4zLTEwLjQgMjMuMy0xNi4zIDMyLjFoMjIuNmM1LjkgMjMuNiAyNy4yIDQwIDUxLjggNDBoMTE4LjJ2NjRoLTE3Ni4xbDQ5LjYgNzYuMmM0LjMgNi43IDQuMSA5LjggLjEgMTYuNi00LjE3IDYuNzgtMTEuMjcgNi41OC0xOS4wNyAyLjA4TDg4IDE2MGgtNDgsNTkuMzN6Ii8+PC9zdmc+" alt="FF Logo" class="brand-logo">
+            <span class="brand-name">Flavor Fusion</span>
+        </a>
+        
+        <ul class="nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="/my-recipes">My Recipes</a></li>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Contact</a></li>
+        </ul>
+        
+        <div class="user-menu">
+            <span class="welcome-text">Welcome, {{ username }}</span>
+            <div class="nav-avatar" onclick="window.location.href='/profile'" 
+                 {% if user_id %}style="background-image: url('/api/avatar/{{ user_id }}?v={{ timestamp }}');"{% endif %}></div>
+        </div>
+    </nav>
+    
+    <div class="profile-container">
+        <div class="profile-header">
+            <div class="avatar-section">
+                <div class="profile-avatar" id="profileAvatar"
+                {% if user_id %}
+                style="background-image: url('/api/avatar/{{ user_id }}?v={{ timestamp }}');"
+                data-original="url('/api/avatar/{{ user_id }}?v={{ timestamp }}')"
+                {% endif %}></div>
+                <label for="avatarInput" class="avatar-upload">
+                    <i class="fas fa-camera"></i>
+                </label>
+                <input type="file" id="avatarInput" accept="image/*">
+            </div>
+            <div class="profile-info">
+                <h1>Edit Profile</h1>
+                <p>Update your personal information</p>
+            </div>
+        </div>
+
+        <form class="profile-form" id="profileForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" value="{{ username }}" readonly>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{ email }}">
+            </div>
+            <div class="form-group">
+                <label for="bio">Bio</label>
+                <textarea id="bio" name="bio">{{ bio }}</textarea>
+            </div>
+            <button type="submit" class="save-button">Save Changes</button>
+        </form>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/toast-message.js') }}"></script>
+    <script>
+        document.getElementById('avatarInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // 验证文件类型
+                const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+                if (!validTypes.includes(file.type)) {
+                    toastMessage.error('Please upload a valid image file (JPG, PNG, GIF)');
+                    return;
+                }
+                
+                // 验证文件大小 (最大 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    toastMessage.error('Image size cannot exceed 5MB');
+                    return;
+                }
+                
+                // 创建临时URL预览
+                const previewUrl = URL.createObjectURL(file);
+                document.getElementById('profileAvatar').style.backgroundImage = `url('${previewUrl}')`;
+                
+                // 显示上传中状态
+                const saveButton = document.querySelector('.save-button');
+                const originalText = saveButton.textContent;
+                saveButton.textContent = 'Uploading avatar...';
+                saveButton.disabled = true;
+                
+                const formData = new FormData();
+                formData.append('avatar', file);
+
+                fetch('/api/update-avatar', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 使用新的API URL格式更新头像
+                        const avatarUrl = data.avatar_url;
+                        // 更新头像显示
+                        document.getElementById('profileAvatar').style.backgroundImage = `url('${avatarUrl}')`;
+                        // 更新data-original属性，确保保存表单时不会丢失头像
+                        document.getElementById('profileAvatar').setAttribute('data-original', `url('${avatarUrl}')`);
+                        // 更新顶部导航栏的头像
+                        document.querySelector('.nav-avatar').style.backgroundImage = `url('${avatarUrl}')`;
+                        
+                        // 显示成功消息
+                        toastMessage.success('Avatar uploaded successfully!');
+                    } else {
+                        toastMessage.error('Error uploading avatar. Please try again');
+                        // 恢复原始头像
+                        const currentAvatar = document.getElementById('profileAvatar').getAttribute('data-original');
+                        if (currentAvatar) {
+                            document.getElementById('profileAvatar').style.backgroundImage = currentAvatar;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    toastMessage.error('Error uploading avatar. Please try again');
+                })
+                .finally(() => {
+                    // 恢复按钮状态
+                    saveButton.textContent = originalText;
+                    saveButton.disabled = false;
+                    // 释放临时URL
+                    URL.revokeObjectURL(previewUrl);
+                });
+            }
+        });
+
+        document.getElementById('profileForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                email: document.getElementById('email').value,
+                bio: document.getElementById('bio').value
+            };
+
+            // 显示保存中状态
+            const saveButton = document.querySelector('.save-button');
+            const originalText = saveButton.textContent;
+            saveButton.textContent = 'Saving...';
+            saveButton.disabled = true;
+            
+            fetch('/api/update-profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    toastMessage.success('Personal information updated successfully!');
+                    // 不需要重置头像，因为头像已经通过API保存到了服务器
+                } else {
+                    toastMessage.error('Error updating personal information: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                toastMessage.error('Error updating personal information. Please try again');
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                saveButton.textContent = originalText;
+                saveButton.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html> 

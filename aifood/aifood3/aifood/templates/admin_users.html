@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flavor Fusion - 用户管理</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <style>
+        .card {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .premium-badge {
+            background-color: #8b5cf6;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        .user-actions .btn {
+            padding: 3px 8px;
+            font-size: 12px;
+        }
+        .search-bar {
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-2 bg-dark sidebar">
+                <div class="sidebar-heading d-flex align-items-center px-3 mt-4 mb-4">
+                    <i class="fas fa-utensils me-2 text-light"></i>
+                    <span class="text-light fs-4">Flavor Fusion</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="/admin/dashboard" class="list-group-item list-group-item-action bg-dark text-light">
+                        <i class="fas fa-tachometer-alt me-2"></i> 控制面板
+                    </a>
+                    <a href="/admin/users" class="list-group-item list-group-item-action bg-dark text-light active">
+                        <i class="fas fa-users me-2"></i> 用户管理
+                    </a>
+                    <a href="/admin/members" class="list-group-item list-group-item-action bg-dark text-light">
+                        <i class="fas fa-crown me-2"></i> 会员管理
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-dark text-light">
+                        <i class="fas fa-cog me-2"></i> 系统设置
+                    </a>
+                    <a href="/" class="list-group-item list-group-item-action bg-dark text-light">
+                        <i class="fas fa-home me-2"></i> 返回首页
+                    </a>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="col-md-10 ms-sm-auto main-content">
+                <!-- 顶部导航 -->
+                <div class="row mb-4 border-bottom py-3">
+                    <div class="col d-flex justify-content-between align-items-center">
+                        <h3>用户管理</h3>
+                        <div class="admin-info d-flex align-items-center">
+                            <span class="me-3">管理员：Flavor</span>
+                            <a href="/admin/logout" class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-sign-out-alt me-1"></i>退出
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i> {{ error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
+                <!-- 用户管理功能区 -->
+                <div class="card mb-4">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div class="search-bar">
+                            <div class="input-group">
+                                <input type="text" id="userSearch" class="form-control" placeholder="搜索用户...">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <a href="/admin/user/add" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-1"></i>添加用户
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 用户列表 -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>用户名</th>
+                                        <th>邮箱</th>
+                                        <th>注册日期</th>
+                                        <th>最后登录</th>
+                                        <th>食谱数</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in users %}
+                                    <tr>
+                                        <td>{{ user.id }}</td>
+                                        <td class="d-flex align-items-center">
+                                            <img src="/api/avatar/{{ user.id }}?v={{ timestamp }}" alt="用户头像" class="user-avatar me-2">
+                                            {{ user.username }}
+                                        </td>
+                                        <td>{{ user.email }}</td>
+                                        <td>{{ user.created_at }}</td>
+                                        <td>{{ user.last_login or '从未登录' }}</td>
+                                        <td>{{ user.recipe_count }}</td>
+                                        <td>
+                                            {% if user.is_premium %}
+                                            <span class="premium-badge"><i class="fas fa-crown me-1"></i>会员</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">普通用户</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="user-actions">
+                                            <a href="/admin/user/{{ user.id }}" class="btn btn-sm btn-info text-white">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="/admin/user/edit/{{ user.id }}" class="btn btn-sm btn-warning text-white">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button class="btn btn-sm btn-danger delete-user" data-id="{{ user.id }}" data-username="{{ user.username }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="8" class="text-center py-3">暂无用户数据</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认删除模态框 -->
+    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">删除用户</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>确定要删除用户 <span id="deleteUserName" class="fw-bold"></span> 吗？此操作不可恢复！</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirmDelete">确认删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 表格搜索功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('userSearch');
+            searchInput.addEventListener('keyup', function() {
+                const searchTerm = this.value.toLowerCase();
+                const tableRows = document.querySelectorAll('tbody tr');
+                
+                tableRows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+
+            // 删除用户功能
+            let deleteUserId = null;
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+            
+            // 绑定删除按钮点击事件
+            document.querySelectorAll('.delete-user').forEach(button => {
+                button.addEventListener('click', function() {
+                    deleteUserId = this.dataset.id;
+                    document.getElementById('deleteUserName').textContent = this.dataset.username;
+                    deleteModal.show();
+                });
+            });
+            
+            // 确认删除
+            document.getElementById('confirmDelete').addEventListener('click', function() {
+                if (!deleteUserId) return;
+                
+                fetch(`/admin/user/delete/${deleteUserId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        deleteModal.hide();
+                        // 刷新页面
+                        window.location.reload();
+                    } else {
+                        alert('删除失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('删除请求出错');
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

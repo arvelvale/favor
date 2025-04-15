@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Recipe Collection - Flavor Fusion</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/recipe-actions.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/my-recipes.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ get_toast_files().css }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>Flavor Fusion</h1>
+        <p>Create Magic with Your Ingredients</p>
+        
+        <div class="user-nav">
+            {% if session.get('user_id') %}
+                <div class="user-info">
+                    <span>Welcome, {{ session.get('username') }}</span>
+                    <div class="avatar-container" onclick="window.location.href='/profile'">
+                        <div class="user-avatar" 
+                             {% if user_id %}
+                             style="background-image: url('/api/avatar/{{ user_id }}?v={{ timestamp }}');"
+                             {% else %}
+                             style="background-image: url('/static/images/default-avatar.png');"
+                             {% endif %}>
+                        </div>
+                    </div>
+                    <div class="user-dropdown">
+                        <a href="/my-recipes"><i class="fas fa-book"></i> My Recipes</a>
+                        <a href="/premium"><i class="fas fa-crown"></i> Premium</a>
+                        <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="auth-links">
+                    <a href="/login" class="auth-btn login-btn"><i class="fas fa-sign-in-alt"></i> Login</a>
+                    <a href="/register" class="auth-btn register-btn"><i class="fas fa-user-plus"></i> Register</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="recipe-history-container">
+        <div class="page-header">
+            <h1>My Recipe Collection</h1>
+            <a href="/" class="back-btn"><i class="fas fa-home"></i> Back to Home</a>
+        </div>
+        
+        <!-- 搜索和筛选控件 -->
+        <div class="recipes-controls">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="recipe-search" placeholder="Search recipes by name or ingredients...">
+            </div>
+            
+            <div class="filter-dropdown">
+                <button class="filter-btn" id="filter-btn">
+                    <i class="fas fa-filter"></i>
+                    <span>Filter</span>
+                </button>
+                <div class="filter-dropdown-content" id="filter-options">
+                    <div class="filter-option">
+                        <input type="radio" id="filter-all" name="filter" value="all" checked>
+                        <label for="filter-all">All Recipes</label>
+                    </div>
+                    <div class="filter-option">
+                        <input type="radio" id="filter-recent" name="filter" value="recent">
+                        <label for="filter-recent">Recently Added</label>
+                    </div>
+                    <div class="filter-option">
+                        <input type="radio" id="filter-alphaAZ" name="filter" value="alphaAZ">
+                        <label for="filter-alphaAZ">Name (A-Z)</label>
+                    </div>
+                    <div class="filter-option">
+                        <input type="radio" id="filter-alphaZA" name="filter" value="alphaZA">
+                        <label for="filter-alphaZA">Name (Z-A)</label>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="filter-btn" id="select-btn">
+                <i class="fas fa-check-square"></i>
+                <span>Select</span>
+            </button>
+        </div>
+        
+        <!-- 批量操作工具栏 -->
+        <div class="bulk-actions" id="bulk-actions">
+            <span><span id="selected-count">0</span> recipes selected</span>
+            <button class="bulk-action-btn bulk-delete-btn" id="bulk-delete-btn">
+                <i class="fas fa-trash-alt"></i> Delete Selected
+            </button>
+            <button class="bulk-action-btn bulk-cancel-btn" id="bulk-cancel-btn">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+        
+        <div id="saved-recipes" class="saved-recipes">
+            <!-- 加载状态显示 -->
+            <div class="loading-recipes">
+                <i class="fas fa-spinner fa-spin"></i> Loading recipes...
+                <div class="loading-timeout-message" style="display:none; margin-top: 10px; font-size: 14px; color: #666;">
+                    Taking longer than expected. If no recipes appear, you may not have saved any recipes yet.
+                </div>
+            </div>
+        </div>
+        
+        <!-- 分页控件 -->
+        <div class="pagination" id="pagination">
+            <!-- 分页按钮会通过JavaScript动态生成 -->
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Flavor Fusion - Your personal AI chef</p>
+        <p class="copyright">© 2023 Flavor Fusion. All rights reserved.</p>
+    </div>
+    
+    <script src="{{ get_toast_files().js }}"></script>
+    <script src="{{ url_for('static', filename='js/my-recipes.js') }}"></script>
+</body>
+</html> 

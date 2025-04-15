@@ -1,0 +1,12 @@
+flask==2.3.3
+flask-cors==4.0.0
+openai==1.66.3
+python-dotenv==1.0.0
+requests==2.31.0
+httpx==0.28.1
+Pillow==10.0.0
+backoff==2.2.1
+Werkzeug==3.0.2
+mysql-connector-python==8.3.0
+bleach>=5.0.1
+paypalrestsdk==1.13.3

@@ -1,0 +1,36 @@
+{
+  "en": [
+    "apple", "avocado", "asparagus",
+    "banana", "beef", "bell pepper", "broccoli",
+    "carrot", "chicken", "cucumber",
+    "egg", "eggplant",
+    "fish", "flour",
+    "garlic", "ginger",
+    "honey",
+    "lemon", "lime",
+    "milk", "mushroom",
+    "noodles",
+    "olive oil", "onion",
+    "pasta", "pork",
+    "rice",
+    "salt", "soy sauce", "sugar",
+    "tomato", "tofu"
+  ],
+  "zh": [
+    "苹果", "牛油果", "芦笋",
+    "香蕉", "牛肉", "甜椒", "西兰花",
+    "胡萝卜", "鸡肉", "黄瓜",
+    "鸡蛋", "茄子",
+    "鱼", "面粉",
+    "大蒜", "姜",
+    "蜂蜜",
+    "柠檬", "酸橙",
+    "牛奶", "蘑菇",
+    "面条",
+    "橄榄油", "洋葱",
+    "意大利面", "猪肉",
+    "米饭",
+    "盐", "酱油", "糖",
+    "番茄", "豆腐"
+  ]
+} 

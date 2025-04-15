@@ -1,0 +1,211 @@
+/* 
+ * 头部样式文件 - header.css
+ * 包含网站头部、标题和用户导航的样式
+ * 注意：此文件依赖于base.css中定义的全局变量
+ */
+
+/* 头部容器样式 */
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--secondary-color);
+    animation: fadeIn 1s ease-in-out;
+    position: relative;
+}
+
+/* 头部标题样式 */
+.header h1 {
+    color: var(--primary-color);
+    font-size: 2.8rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+/* 头部副标题样式 */
+.header p {
+    color: var(--accent-color);
+    font-size: 1.3rem;
+    font-weight: 300;
+}
+
+/* 标题动画效果 */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 用户导航栏样式 */
+.user-nav {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    padding-right: 15px;
+    z-index: 1000;
+}
+
+/* 已登录用户信息样式 */
+.user-info {
+    position: relative;
+    color: var(--dark-color);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 30px;
+    padding: 8px 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.user-info span {
+    margin-right: 8px;
+    font-size: 0.95rem;
+}
+
+/* 用户下拉菜单 */
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 10px 0;
+    min-width: 180px;
+    display: none;
+    z-index: 100;
+}
+
+.user-info:hover .user-dropdown {
+    display: block;
+}
+
+.user-dropdown a {
+    display: block;
+    padding: 10px 15px;
+    color: var(--dark-color);
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.user-dropdown a:hover {
+    background-color: #f5f7fa;
+    color: var(--primary-color);
+}
+
+/* 用户头像样式 */
+.avatar-container {
+    display: inline-block;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid var(--primary-color);
+    transition: border-color 0.3s;
+}
+
+.user-avatar:hover {
+    border-color: #e85a2c;
+}
+
+/* 未登录状态的认证链接 */
+.auth-links {
+    display: flex;
+    gap: 10px;
+}
+
+.auth-btn {
+    padding: 8px 15px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.login-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: var(--dark-color);
+    border: 1px solid var(--primary-color);
+}
+
+.register-btn {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.login-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.register-btn:hover {
+    background-color: #e85a2c;
+}
+
+/* 用户操作按钮样式 */
+.user-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+}
+
+.history-btn {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.history-btn:hover {
+    background-color: var(--primary-color-dark);
+    transform: translateY(-1px);
+}
+
+.history-btn i {
+    font-size: 1.1em;
+}
+
+/* 响应式布局调整 */
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 2.2rem;
+    }
+    
+    .header p {
+        font-size: 1.1rem;
+    }
+    
+    .user-nav {
+        top: 15px;
+        right: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header h1 {
+        font-size: 1.8rem;
+    }
+    
+    .user-info span {
+        display: none;
+    }
+    
+    .auth-btn {
+        padding: 6px 10px;
+        font-size: 0.9rem;
+    }
+} 

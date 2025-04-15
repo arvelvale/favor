@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login with Verification - Flavor Fusion</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/auth.css">
+</head>
+<body>
+    <div class="auth-container">
+        <!-- Left Brand Section -->
+        <div class="brand-section">
+            <div class="brand-overlay"></div>
+            <div class="brand-content">
+                <h1 class="brand-logo">Flavor Fusion</h1>
+                <p class="brand-tagline">Smart Cooking, Delicious Results</p>
+                <div class="brand-features">
+                    <div class="feature-item">
+                        <i class="fas fa-utensils"></i>
+                        <span>AI-powered Recipe Generation</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-save"></i>
+                        <span>Save Your Favorite Recipes</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>Access Anywhere, Anytime</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Form Section -->
+        <div class="form-section">
+            <div class="form-container">
+                <a href="/" class="back-to-home">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+                
+                <h2 class="form-title">Verification Code Login</h2>
+                
+                <div class="tabs">
+                    <div class="tab" onclick="location.href='/login'">Login</div>
+                    <div class="tab" onclick="location.href='/register'">Register</div>
+                    <div class="tab active">Verification</div>
+                </div>
+                
+                <form id="verification-form">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="email" name="email" placeholder="Enter your email address" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="verification-code">Verification Code</label>
+                        <div class="verification-code-wrapper">
+                            <div class="input-icon-wrapper verification-input">
+                                <i class="fas fa-key"></i>
+                                <input type="text" id="verification-code" name="verification-code" placeholder="Enter verification code" required>
+                            </div>
+                            <button type="button" id="get-code-btn" class="get-code-btn">
+                                Get Code
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p class="form-info">We will send a verification code to your email address.</p>
+                    
+                    <button type="submit" class="btn-submit">
+                        <span class="btn-text">Login</span>
+                        <span class="btn-loader"><i class="fas fa-spinner fa-spin"></i></span>
+                    </button>
+                    
+                    <div id="error-message" class="error-message"></div>
+                    <div id="success-message" class="success-message"></div>
+                    
+                    <div class="redirect-prompt">
+                        <p><a href="/login">Use password login instead</a></p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/auth.js"></script>
+</body>
+</html> 

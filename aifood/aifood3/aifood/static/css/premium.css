@@ -1,0 +1,599 @@
+/* 全局样式 */
+body {
+    font-family: 'Open Sans', sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #333333;
+    background-color: #F5F5F5;
+}
+
+h1, h2, h3 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+}
+
+.premium-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* 顶部导航栏 */
+.premium-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background-color: #FFFFFF;
+    border-bottom: 1px solid #DDDDDD;
+}
+
+.premium-header-left {
+    display: flex;
+    flex-direction: column;
+}
+
+.premium-logo {
+    font-size: 28px;
+    font-weight: 700;
+    color: #FFA500;
+    margin: 0;
+}
+
+.premium-subtitle {
+    font-size: 14px;
+    color: #666666;
+    margin: 5px 0 0 0;
+}
+
+.premium-header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.premium-welcome {
+    font-size: 14px;
+    color: #666666;
+    margin: 0;
+}
+
+.premium-back-btn {
+    background-color: #FFA500;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.premium-back-btn:hover {
+    background-color: #FF8C00;
+}
+
+/* 页面标题 */
+.premium-hero {
+    text-align: center;
+    padding: 60px 20px;
+    background-color: #F5F5F5;
+    border-bottom: 1px solid #DDDDDD;
+}
+
+.premium-hero h1 {
+    font-size: 32px;
+    color: #000000;
+    margin: 0 0 15px 0;
+}
+
+.premium-hero p {
+    font-size: 18px;
+    color: #666666;
+    margin: 0;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* 会员服务选项 */
+.premium-plans {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    padding: 60px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.premium-plan-card {
+    background-color: #FFFFFF;
+    border: 1px solid #DDDDDD;
+    border-radius: 8px;
+    padding: 30px;
+    width: 45%;
+    max-width: 400px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.premium-plan-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.premium-plan-featured {
+    border: 2px solid #FFA500;
+}
+
+.premium-plan-badge {
+    position: absolute;
+    top: -12px;
+    right: 20px;
+    background-color: #FFA500;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.premium-plan-card h2 {
+    font-size: 24px;
+    margin: 0 0 20px 0;
+    color: #000000;
+}
+
+.premium-price {
+    font-size: 28px;
+    font-weight: 700;
+    color: #FFA500;
+    margin-bottom: 15px;
+}
+
+.premium-price span {
+    font-size: 16px;
+    font-weight: 400;
+    color: #666666;
+}
+
+.premium-plan-desc {
+    font-size: 14px;
+    color: #666666;
+    margin-bottom: 30px;
+    min-height: 40px;
+}
+
+.premium-subscribe-btn {
+    background-color: #FFA500;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 0;
+    width: 100%;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.premium-subscribe-btn:hover {
+    background-color: #FF8C00;
+}
+
+.premium-subscribe-btn:disabled {
+    background-color: #DDDDDD;
+    cursor: not-allowed;
+}
+
+/* 会员权益列表 */
+.premium-benefits {
+    background-color: #FFFFFF;
+    border: 1px solid #DDDDDD;
+    border-radius: 8px;
+    padding: 30px;
+    max-width: 800px;
+    margin: 0 auto 60px auto;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.premium-benefits h2 {
+    font-size: 20px;
+    color: #000000;
+    margin: 0 0 20px 0;
+}
+
+.premium-benefits-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.premium-benefits-list li {
+    font-size: 16px;
+    color: #666666;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.premium-benefits-list li i {
+    color: #FFA500;
+    margin-right: 10px;
+}
+
+/* 用户评价 */
+.premium-testimonials {
+    background-color: #F5F5F5;
+    border: 1px solid #DDDDDD;
+    border-radius: 8px;
+    padding: 30px;
+    max-width: 800px;
+    margin: 0 auto 60px auto;
+}
+
+.premium-testimonials h2 {
+    font-size: 20px;
+    color: #000000;
+    margin: 0 0 20px 0;
+    text-align: center;
+}
+
+.premium-testimonial-container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.premium-testimonial-card {
+    background-color: #FFFFFF;
+    border: 1px solid #DDDDDD;
+    border-radius: 8px;
+    padding: 20px;
+    flex: 1;
+    min-width: 250px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.premium-testimonial-card p {
+    font-size: 14px;
+    color: #666666;
+    margin: 0 0 10px 0;
+}
+
+.premium-testimonial-author {
+    font-style: italic;
+    font-size: 12px !important;
+    text-align: right;
+}
+
+/* 常见问题 */
+.premium-faq {
+    background-color: #FFFFFF;
+    border: 1px solid #DDDDDD;
+    border-radius: 8px;
+    padding: 30px;
+    max-width: 800px;
+    margin: 0 auto 60px auto;
+}
+
+.premium-faq h2 {
+    font-size: 20px;
+    color: #000000;
+    margin: 0 0 20px 0;
+}
+
+.premium-faq-item {
+    margin-bottom: 20px;
+}
+
+.premium-faq-item h3 {
+    font-size: 16px;
+    color: #666666;
+    margin: 0 0 10px 0;
+    font-weight: 600;
+}
+
+.premium-faq-item p {
+    font-size: 14px;
+    color: #666666;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* 底部导航栏 */
+.premium-footer {
+    background-color: #F5F5F5;
+    border-top: 1px solid #DDDDDD;
+    padding: 20px;
+    text-align: center;
+}
+
+.premium-footer-links {
+    font-size: 14px;
+    color: #666666;
+}
+
+.premium-footer-links a {
+    color: #666666;
+    text-decoration: none;
+    margin: 0 10px;
+    transition: color 0.3s ease;
+}
+
+.premium-footer-links a:hover {
+    color: #FFA500;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .premium-header {
+        padding: 15px;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .premium-header-right {
+        flex-direction: column;
+    }
+    
+    .premium-plans {
+        flex-direction: column;
+        padding: 30px 20px;
+    }
+    
+    .premium-plan-card {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .premium-testimonial-container {
+        flex-direction: column;
+    }
+    
+    .premium-testimonial-card {
+        width: 100%;
+    }
+}
+
+/* PayPal Button Containers */
+.paypal-button-container {
+    margin-top: 15px;
+    width: 100%;
+    overflow: hidden;
+    display: none; /* Hide by default, will be shown via JS when needed */
+}
+
+/* Subscription options container for extension */
+.subscription-options {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    flex-wrap: nowrap; /* 防止换行，保持在一行 */
+}
+
+/* 扩展订阅部分容器 */
+#extend-subscription-section {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* 返回按钮容器 */
+.premium-back-option {
+    text-align: center;
+    width: 100%;
+    margin: 30px auto 0;
+    clear: both;
+}
+
+/* 返回按钮样式 */
+.premium-back-to-info-btn {
+    background-color: #666;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: inline-block;
+}
+
+.premium-back-to-info-btn:hover {
+    background-color: #555;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.premium-back-to-info-btn i {
+    margin-right: 8px;
+}
+
+@media (max-width: 900px) {
+    .subscription-options {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .subscription-options .premium-plan-card {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .premium-back-to-info-btn {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
+/* Active Subscription Display */
+.premium-active-plan {
+    background-color: #FFFFFF;
+    border: 2px solid #FFA500;
+    border-radius: 8px;
+    padding: 30px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    margin: 0 auto;
+}
+
+.premium-active-plan .premium-plan-badge {
+    background-color: #FFA500;
+}
+
+.premium-active-plan h2 {
+    font-size: 24px;
+    margin: 0 0 20px 0;
+    color: #000000;
+}
+
+.premium-benefits-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #4CAF50;
+    margin: 20px 0;
+    font-weight: 600;
+}
+
+.premium-benefits-check i {
+    margin-right: 10px;
+    font-size: 24px;
+}
+
+/* Message Notifications */
+.premium-message {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background-color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 90%;
+    width: auto;
+}
+
+.premium-message.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.premium-message.success {
+    border-left: 4px solid #4CAF50;
+}
+
+.premium-message.success i {
+    color: #4CAF50;
+}
+
+.premium-message.error {
+    border-left: 4px solid #F44336;
+}
+
+.premium-message.error i {
+    color: #F44336;
+}
+
+.premium-message i {
+    margin-right: 10px;
+    font-size: 20px;
+}
+
+.premium-message-close {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 20px;
+    cursor: pointer;
+    margin-left: 15px;
+    padding: 0;
+}
+
+.premium-message-close:hover {
+    color: #666;
+}
+
+/* 特色权益样式 */
+.featured-benefit {
+    background-color: #fff8e6;
+    margin: 0 -30px 10px -30px;
+    padding: 12px 30px;
+    border-left: 4px solid #FFA500;
+    font-size: 18px !important;
+}
+
+.featured-benefit i {
+    color: #FFA500;
+    font-size: 18px;
+}
+
+.premium-plan-note {
+    font-size: 14px;
+    color: #666666;
+    margin: 20px 0;
+    border-left: 3px solid #FFA500;
+    padding-left: 10px;
+    background-color: #FFF8E8;
+    padding: 10px 15px;
+    border-radius: 5px;
+}
+
+.premium-plan-note i {
+    color: #FFA500;
+    margin-right: 5px;
+}
+
+.premium-plan-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.premium-renew-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.premium-renew-btn:hover {
+    background-color: #3E8E41;
+}
+
+@media (max-width: 768px) {
+    .premium-plan-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .premium-renew-btn,
+    .premium-back-btn {
+        width: 100%;
+        text-align: center;
+        margin-left: 0 !important;
+    }
+}

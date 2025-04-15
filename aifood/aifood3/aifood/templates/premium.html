@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN" {% if subscription %}data-has-subscription="true"{% else %}data-has-subscription="false"{% endif %}>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flavor Fusion - Premium Membership</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/premium.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- PayPal SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=&currency=USD"></script>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="premium-header">
+        <div class="premium-header-left">
+            <h1 class="premium-logo">Flavor Fusion</h1>
+            <p class="premium-subtitle">Create Magic with Your Ingredients</p>
+        </div>
+        <div class="premium-header-right">
+            <p class="premium-welcome">Welcome, {{ session.get('username', 'Guest') }}</p>
+            <a href="/" class="premium-back-btn">Back to Home</a>
+        </div>
+    </header>
+
+    <!-- 页面标题 -->
+    <section class="premium-hero">
+        <h1>Unlock Premium Features</h1>
+        <p>Get unlimited access to all recipes and exclusive features.</p>
+    </section>
+
+    <!-- 会员服务选项 -->
+    <section class="premium-plans">
+        {% if subscription %}
+        <div class="premium-active-plan">
+            <div class="premium-plan-badge">Active Subscription</div>
+            <h2>{{ subscription.plan_type|capitalize }} Plan</h2>
+            <p class="premium-plan-desc">Your subscription is active until {{ subscription.end_date.strftime('%B %d, %Y') }}</p>
+            <div class="premium-benefits-check">
+                <i class="fas fa-check-circle"></i> Enjoying premium features
+            </div>
+            <p class="premium-plan-note"><i class="fas fa-info-circle"></i> You can extend your subscription by purchasing another plan. New subscription time will be added to your current plan.</p>
+            <div class="premium-plan-buttons">
+                <a href="/" class="premium-back-btn" style="margin-top: 20px; display: inline-block;">
+                    Continue Using Premium Features
+                </a>
+                <button class="premium-renew-btn" id="extendSubscriptionBtn" style="margin-top: 20px; margin-left: 10px; display: inline-block;">
+                    Extend Subscription
+                </button>
+            </div>
+        </div>
+        
+        <!-- 扩展订阅选项（初始隐藏） -->
+        <div id="extend-subscription-section" style="display: none;">
+            <div class="subscription-options">
+                <div class="premium-plan-card">
+                    <h2>Monthly Plan</h2>
+                    <div class="premium-price">$7.9<span>/month</span></div>
+                    <p class="premium-plan-desc">Unlimited access to all recipes and features. Cancel anytime.</p>
+                    <button class="premium-subscribe-btn" data-plan="monthly">Subscribe Monthly</button>
+                    <div id="paypal-button-monthly" class="paypal-button-container"></div>
+                </div>
+                <div class="premium-plan-card premium-plan-featured">
+                    <div class="premium-plan-badge">Best Value</div>
+                    <h2>Annual Plan</h2>
+                    <div class="premium-price">$79.9<span>/year</span></div>
+                    <p class="premium-plan-desc">Save 15% with annual subscription. Unlimited access to all recipes and features.</p>
+                    <button class="premium-subscribe-btn" data-plan="annual">Subscribe Annually</button>
+                    <div id="paypal-button-annual" class="paypal-button-container"></div>
+                </div>
+            </div>
+            <div class="premium-back-option">
+                <button class="premium-back-to-info-btn" id="backToSubscriptionBtn">
+                    <i class="fas fa-arrow-left"></i> Back to My Subscription
+                </button>
+            </div>
+        </div>
+        {% else %}
+        <div class="premium-plan-card">
+            <h2>Monthly Plan</h2>
+            <div class="premium-price">$7.9<span>/month</span></div>
+            <p class="premium-plan-desc">Unlimited access to all recipes and features. Cancel anytime.</p>
+            <button class="premium-subscribe-btn" data-plan="monthly">Subscribe Monthly</button>
+            <div id="paypal-button-monthly" class="paypal-button-container"></div>
+        </div>
+        <div class="premium-plan-card premium-plan-featured">
+            <div class="premium-plan-badge">Best Value</div>
+            <h2>Annual Plan</h2>
+            <div class="premium-price">$79.9<span>/year</span></div>
+            <p class="premium-plan-desc">Save 15% with annual subscription. Unlimited access to all recipes and features.</p>
+            <button class="premium-subscribe-btn" data-plan="annual">Subscribe Annually</button>
+            <div id="paypal-button-annual" class="paypal-button-container"></div>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- 会员权益列表 -->
+    <section class="premium-benefits">
+        <h2>What You Get:</h2>
+        <ul class="premium-benefits-list">
+            <li class="featured-benefit"><i class="fas fa-infinity"></i> <strong>Unlimited recipe generations</strong> (Free users limited to 3 per day)</li>
+            <li><i class="fas fa-check"></i> Exclusive access to premium recipes</li>
+            <li><i class="fas fa-check"></i> Ad-free experience</li>
+            <li><i class="fas fa-check"></i> Priority customer support</li>
+            <li><i class="fas fa-check"></i> Early access to new features</li>
+        </ul>
+    </section>
+
+    <!-- 用户评价 -->
+    <section class="premium-testimonials">
+        <h2>What Our Members Say:</h2>
+        <div class="premium-testimonial-container">
+            <div class="premium-testimonial-card">
+                <p>"Flavor Fusion has transformed my cooking experience! The recipes are amazing and easy to follow."</p>
+                <p class="premium-testimonial-author">- Sarah L.</p>
+            </div>
+            <div class="premium-testimonial-card">
+                <p>"I love the variety of recipes I can create with just a few ingredients. Worth every penny!"</p>
+                <p class="premium-testimonial-author">- John D.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 常见问题 -->
+    <section class="premium-faq">
+        <h2>Frequently Asked Questions:</h2>
+        <div class="premium-faq-item">
+            <h3>Can I cancel my subscription anytime?</h3>
+            <p>Yes, you can cancel your subscription at any time. No hidden fees.</p>
+        </div>
+        <div class="premium-faq-item">
+            <h3>Is there a free trial?</h3>
+            <p>We currently do not offer a free trial, but we offer a 30-day money-back guarantee.</p>
+        </div>
+        <div class="premium-faq-item">
+            <h3>How do I manage my subscription?</h3>
+            <p>You can manage your subscription through your account settings.</p>
+        </div>
+        <div class="premium-faq-item">
+            <h3>Can I extend my current subscription?</h3>
+            <p>Yes! If you purchase a new subscription while your current one is still active, the time will be added to your existing plan. For example, if you have 10 days left on your subscription and you purchase a monthly plan, your new expiration date will be 10 days + 30 days from now.</p>
+        </div>
+    </section>
+
+    <!-- 底部导航栏 -->
+    <footer class="premium-footer">
+        <div class="premium-footer-links">
+            <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a> | <a href="#">Contact Us</a>
+        </div>
+    </footer>
+
+    <!-- Success/Error messages -->
+    <div id="premium-message" class="premium-message {% if request.args.get('status') == 'success' %}show success{% elif request.args.get('error') %}show error{% endif %}">
+        {% if request.args.get('status') == 'success' %}
+            <i class="fas fa-check-circle"></i> Congratulations! Your premium subscription is now active. {% if request.args.get('extended') == 'true' %}Your subscription period has been extended.{% endif %}
+        {% elif request.args.get('error') == 'invalid_token' %}
+            <i class="fas fa-exclamation-circle"></i> There was a problem with your payment. Please try again.
+        {% elif request.args.get('error') == 'database' %}
+            <i class="fas fa-exclamation-circle"></i> There was a problem saving your subscription. Please contact support.
+        {% elif request.args.get('cancelled') == 'true' %}
+            <i class="fas fa-info-circle"></i> Your payment was cancelled. You can try again anytime.
+        {% endif %}
+        <button class="premium-message-close">&times;</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle message close button
+            const messageCloseBtn = document.querySelector('.premium-message-close');
+            const messageBox = document.getElementById('premium-message');
+            
+            if (messageCloseBtn && messageBox) {
+                messageCloseBtn.addEventListener('click', function() {
+                    messageBox.classList.remove('show');
+                    // Clean URL parameters
+                    const url = new URL(window.location);
+                    url.search = '';
+                    window.history.replaceState({}, document.title, url);
+                });
+                
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    messageBox.classList.remove('show');
+                    // Clean URL parameters
+                    const url = new URL(window.location);
+                    url.search = '';
+                    window.history.replaceState({}, document.title, url);
+                }, 5000);
+            }
+            
+            // Handle extend subscription button
+            const extendBtn = document.getElementById('extendSubscriptionBtn');
+            const activePlan = document.querySelector('.premium-active-plan');
+            const extendSection = document.getElementById('extend-subscription-section');
+            
+            if (extendBtn && activePlan && extendSection) {
+                extendBtn.addEventListener('click', function() {
+                    activePlan.style.display = 'none';
+                    extendSection.style.display = 'block';
+                    
+                    // Initialize PayPal buttons if not already initialized
+                    initializePayPalButtons();
+                });
+            }
+            
+            // 添加返回按钮事件处理
+            const backBtn = document.getElementById('backToSubscriptionBtn');
+            if (backBtn) {
+                backBtn.addEventListener('click', function() {
+                    document.querySelector('.premium-active-plan').style.display = 'block';
+                    document.getElementById('extend-subscription-section').style.display = 'none';
+                });
+            }
+            
+            // Get subscription status from HTML data attribute
+            const hasSubscription = document.documentElement.getAttribute('data-has-subscription') === 'true';
+            
+            // Function to initialize PayPal buttons
+            function initializePayPalButtons() {
+                const subscribeButtons = document.querySelectorAll('.premium-subscribe-btn');
+                
+                subscribeButtons.forEach(button => {
+                    const planType = button.dataset.plan;
+                    
+                    button.addEventListener('click', async function() {
+                        try {
+                            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                            this.disabled = true;
+                            
+                            // Create PayPal order
+                            const response = await fetch('/api/create-paypal-order', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ plan_type: planType })
+                            });
+                            
+                            const data = await response.json();
+                            
+                            if (data.success) {
+                                // Redirect to PayPal approval URL
+                                window.location.href = data.approval_url;
+                            } else {
+                                throw new Error(data.message || 'An error occurred');
+                            }
+                        } catch (error) {
+                            alert('Error: ' + error.message);
+                            this.innerHTML = planType === 'monthly' ? 'Subscribe Monthly' : 'Subscribe Annually';
+                            this.disabled = false;
+                        }
+                    });
+                });
+                
+                // This code would be used with a real PayPal integration
+                if (document.getElementById('paypal-button-monthly')) {
+                    paypal.Buttons({
+                        style: {
+                            shape: 'rect',
+                            color: 'gold',
+                            layout: 'vertical',
+                        },
+                        createOrder: function(data, actions) {
+                            return fetch('/api/create-paypal-order', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ plan_type: 'monthly' })
+                            })
+                            .then(function(response) { return response.json(); })
+                            .then(function(order) { return order.order_id; });
+                        },
+                        onApprove: function(data, actions) {
+                            return fetch('/api/capture-paypal-order?paymentId=' + data.orderID + '&PayerID=' + data.payerID)
+                            .then(function(response) { 
+                                // 重定向到成功页面而不是尝试解析响应为JSON
+                                window.location.href = '/premium?status=success'; 
+                                return true;
+                            });
+                        }
+                    }).render('#paypal-button-monthly');
+                }
+                
+                if (document.getElementById('paypal-button-annual')) {
+                    paypal.Buttons({
+                        style: {
+                            shape: 'rect',
+                            color: 'gold',
+                            layout: 'vertical',
+                        },
+                        createOrder: function(data, actions) {
+                            return fetch('/api/create-paypal-order', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ plan_type: 'annual' })
+                            })
+                            .then(function(response) { return response.json(); })
+                            .then(function(order) { return order.order_id; });
+                        },
+                        onApprove: function(data, actions) {
+                            return fetch('/api/capture-paypal-order?paymentId=' + data.orderID + '&PayerID=' + data.payerID)
+                            .then(function(response) { 
+                                // 重定向到成功页面而不是尝试解析响应为JSON
+                                window.location.href = '/premium?status=success'; 
+                                return true;
+                            });
+                        }
+                    }).render('#paypal-button-annual');
+                }
+            }
+            
+            if (!hasSubscription) {
+                // Initialize PayPal buttons
+                initializePayPalButtons();
+            }
+        });
+    </script>
+</body>
+</html>

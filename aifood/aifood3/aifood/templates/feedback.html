@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Feedback - Flavor Fusion{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"> <!-- Reuse index styles -->
+    <style>
+        .feedback-container {
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .feedback-container h2 {
+            color: var(--primary-color);
+            margin-bottom: 25px;
+            font-size: 28px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        .form-group input[type="text"]:focus,
+        .form-group input[type="email"]:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        .submit-btn {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .submit-btn:hover {
+            background-color: var(--secondary-color);
+        }
+        .submit-btn.loading {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .submit-btn.loading i {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="feedback-container">
+        <h2><i class="fas fa-comments"></i> Send Us Your Feedback</h2>
+        <p style="margin-bottom: 30px; color: #666;">We value your opinion! Let us know what you think or if you encountered any issues.</p>
+        
+        <form id="feedbackForm">
+            <div class="form-group">
+                <label for="name">Name (Optional)</label>
+                <input type="text" id="name" name="name">
+            </div>
+            <div class="form-group">
+                <label for="email">Your Email (Required)</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="message">Feedback Message (Required)</label>
+                <textarea id="message" name="message" required></textarea>
+            </div>
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <i class="fas fa-paper-plane"></i> Send Feedback
+            </button>
+        </form>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }} {# Include scripts from base.html if any #}
+    <script>
+        document.getElementById('feedbackForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const form = this;
+            const name = form.elements['name'].value.trim();
+            const email = form.elements['email'].value.trim();
+            const message = form.elements['message'].value.trim();
+
+            if (!email || !message) {
+                toastMessage.error('Please fill in the required fields (Email and Message).');
+                return;
+            }
+
+            // Basic email validation
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(email)) {
+                toastMessage.error('Please enter a valid email address.');
+                return;
+            }
+
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+            fetch('/api/send-feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, email, message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Feedback';
+
+                if (data.success) {
+                    toastMessage.success('Feedback sent successfully! Thank you.');
+                    form.reset(); // Clear the form
+                } else {
+                    toastMessage.error(data.message || 'Failed to send feedback. Please try again later.');
+                }
+            })
+            .catch(error => {
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Feedback';
+                toastMessage.error('An error occurred. Please check your connection and try again.');
+                console.error('Error sending feedback:', error);
+            });
+        });
+    </script>
+{% endblock %} 

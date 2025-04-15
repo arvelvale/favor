@@ -1,0 +1,35 @@
+/**
+ * 主容器样式 - main-container.css
+ * 从styles.css中提取的.main-container相关样式
+ */
+
+/* 主容器基本样式 */
+.main-container {
+    background-color: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    margin-top: 30px;
+    transition: all 0.3s ease;
+}
+
+/* 主容器悬停效果 */
+.main-container:hover {
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* 响应式设计调整 */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* 小屏幕设备的调整 */
+    .main-container {
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
+} 
