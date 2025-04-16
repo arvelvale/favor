@@ -260,6 +260,13 @@ pip freeze > requirements.txt
 ### 清理旧数据 (可选)
 根据需要，可以考虑定期清理或归档旧的访问记录 (`user_visits`) 或验证码记录 (`email_verification_codes`)，以控制数据库大小。
 
+### 2025年4月16日更新
+1.增加了用户反馈界面
+2.未登录用户在使用create recipe功能时会跳转至登录页面
+3.解决了password输入处警告重复的问题
+4.在验证密码是否相同时，把passwords match格式修改为和valid username一样的样式
+5.修改了不正确的年份2023
+
 ## 注意事项
 - **安全**：
     - **切勿**将敏感信息（如 API 密钥、数据库密码、邮箱密码、Secret Key）直接硬编码在代码中或提交到 Git 仓库。强烈推荐使用环境变量 (`.env`) 或专门的配置管理工具。
