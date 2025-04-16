@@ -131,13 +131,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.classList.add('loading');
                 
                 // 发送验证码请求
+                
+                // <<< 新增：判断当前操作场景 >>>
+                let action = 'login'; // 默认是登录
+                if (window.location.pathname.includes('/register')) {
+                    action = 'register';
+                } else if (window.location.pathname.includes('/verification-login')) {
+                    // verification-login 页面同时用于登录和重置密码，
+                    // 但后端逻辑目前将 'login' 和 'reset_password' 处理逻辑相同
+                    // （都需要邮箱已注册），所以用 'login' 或 'reset_password' 都可以。
+                    // 为清晰起见，可以维持 'login' 或明确指定 'reset_password'
+                    action = 'login'; // 或者 'reset_password'
+                }
+                // <<< 结束新增 >>>
+                
                 fetch('/api/send-verification-code', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        email: emailValue
+                        email: emailValue,
+                        action: action // <<< 修改：添加 action 参数 >>>
                     })
                 })
                 .then(response => response.json())
@@ -193,11 +208,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!validators[type]) return;
         
         const validator = validators[type];
+        const formGroup = input.closest('.form-group'); // 找到最近的 .form-group 父元素
+        if (!formGroup) return; // 如果找不到，则退出
         
-        // Add validation message element
-        const validationMessage = document.createElement('div');
-        validationMessage.className = 'validation-message';
-        input.parentNode.parentNode.appendChild(validationMessage);
+        // 查找或创建验证消息元素，确保它在 form-group 内，但在 input/button 行之后
+        let validationMessage = formGroup.querySelector('.validation-message');
+        if (!validationMessage) {
+            validationMessage = document.createElement('div');
+            validationMessage.className = 'validation-message';
+            formGroup.appendChild(validationMessage); // 添加到 form-group 的末尾
+        }
         
         // Add input event listener
         input.addEventListener('input', function() {
