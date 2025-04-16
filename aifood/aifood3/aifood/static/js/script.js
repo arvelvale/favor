@@ -107,6 +107,15 @@ function updateSelectedIngredients() {
 // Generate recipe
 // 修改生成按钮的事件处理
 generateBtn.addEventListener('click', async () => {
+    // 新增：检查用户是否登录
+    // 尝试查找 base.html 中登录后才会渲染的用户信息或头像元素
+    const loggedInUserElement = document.querySelector('.user-info') || document.querySelector('.user-avatar'); 
+    if (!loggedInUserElement) {
+        // 如果找不到用户登录元素，则跳转到登录页
+        window.location.href = '/login'; 
+        return; // 阻止后续代码执行
+    }
+
     if (selectedItems.length === 0) {
         // 创建自定义提示框而不是使用alert
         showIngredientAlert('Please select at least one ingredient');

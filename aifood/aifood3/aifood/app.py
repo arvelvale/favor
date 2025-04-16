@@ -1298,13 +1298,14 @@ def handle_feedback():
         # Return a generic error message to the user, log the specific error
         logger.error(f"Failed to send feedback email. Reason: {status_message}")
         return jsonify({"success": False, "message": "Failed to send feedback due to a server error. Please try again later."}), 500
-
 if __name__ == "__main__":
-    logger.info("Starting Flask application...")
-    # 初始化数据库等操作可以保留
+    logger.info("Initializing database...")
     init_database()
+    logger.info("Database initialization complete.")
+    logger.info("Applying database fixes...")
     fix_database()
-    # 当使用 Gunicorn 时，不需要 Flask 自带的 app.run()
+    logger.info("Database fixes applied.")
+    #当使用 Gunicorn 时，不需要 Flask 自带的 app.run()
     try:
         # 尝试使用默认端口5000
         app.run(debug=True, host='0.0.0.0', port=5000)
@@ -1317,3 +1318,4 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error(f"Error starting on port 5001: {str(e)}")
             logger.error("Failed to start the application on both ports.")
+

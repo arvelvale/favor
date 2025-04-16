@@ -563,9 +563,11 @@ input:valid:not(:placeholder-shown) + i {
 }
 
 .validation-message {
-    font-size: 0.8rem;
-    margin-top: 0.25rem;
-    transition: all 0.3s ease;
+    font-size: 0.85rem;
+    margin-top: 8px;
+    min-height: 1.2em;
+    width: 100%;
+    display: block;
 }
 
 .validation-error {

@@ -209,30 +209,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // 对邮箱输入使用较为宽松的实时验证
-            if (type === 'email') {
-                // 在用户输入时使用宽松验证，只要输入了内容就通过
-                if (value.length > 0) {
-                    validationMessage.textContent = '✓ Valid format';
-                    validationMessage.className = 'validation-message validation-success';
-                } else {
-                    validationMessage.textContent = validator.errorMessage;
-                    validationMessage.className = 'validation-message validation-error';
+            // 修改：对邮箱输入也使用严格的实时格式验证
+            // 不再对 email 类型做特殊处理，统一使用 validator.pattern
+            if (validator.pattern.test(value)) {
+                validationMessage.textContent = '✓ Valid format';
+                validationMessage.className = 'validation-message validation-success';
+                
+                // 如果是用户名字段且格式正确，移除可能的"用户名已存在"错误
+                if (type === 'username' && input.dataset.usernameExists === 'true') {
+                    input.dataset.usernameExists = 'false';
                 }
             } else {
-                // 对其他类型字段使用原有的严格验证
-                if (validator.pattern.test(value)) {
-                    validationMessage.textContent = '✓ Valid format';
-                    validationMessage.className = 'validation-message validation-success';
-                    
-                    // 如果是用户名字段且格式正确，移除可能的"用户名已存在"错误
-                    if (type === 'username' && input.dataset.usernameExists === 'true') {
-                        input.dataset.usernameExists = 'false';
-                    }
-                } else {
-                    validationMessage.textContent = validator.errorMessage;
-                    validationMessage.className = 'validation-message validation-error';
-                }
+                validationMessage.textContent = validator.errorMessage;
+                validationMessage.className = 'validation-message validation-error';
             }
         });
         
@@ -446,24 +435,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const confirmPassword = this.value;
             
             // 获取或创建验证消息元素
-            let confirmMessage = this.parentNode.parentNode.querySelector('.confirm-message');
+            let confirmMessage = this.parentNode.parentNode.querySelector('.confirm-validation-message');
             if (!confirmMessage) {
                 confirmMessage = document.createElement('div');
-                confirmMessage.className = 'confirm-message';
+                confirmMessage.className = 'validation-message confirm-validation-message';
                 this.parentNode.parentNode.appendChild(confirmMessage);
             }
             
             // 验证密码匹配
             if (confirmPassword === '') {
-                confirmMessage.style.display = 'none';
+                confirmMessage.textContent = '';
+                confirmMessage.className = 'validation-message confirm-validation-message';
             } else if (password === confirmPassword) {
                 confirmMessage.textContent = '✓ Passwords match';
-                confirmMessage.className = 'confirm-message match';
-                confirmMessage.style.display = 'block';
+                confirmMessage.className = 'validation-message confirm-validation-message validation-success';
             } else {
                 confirmMessage.textContent = 'Passwords do not match';
-                confirmMessage.className = 'confirm-message no-match';
-                confirmMessage.style.display = 'block';
+                confirmMessage.className = 'validation-message confirm-validation-message validation-error';
             }
         });
         
@@ -505,9 +493,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // 验证密码格式
+            // 新增：验证密码格式
             if (!validators.password.pattern.test(password)) {
                 showError(validators.password.errorMessage);
+                // 同时在密码输入框下方显示错误（如果验证消息元素存在）
+                const passwordValidationMsg = passwordInput.parentNode.parentNode.querySelector('.validation-message');
+                if (passwordValidationMsg) {
+                    passwordValidationMsg.textContent = validators.password.errorMessage;
+                    passwordValidationMsg.className = 'validation-message validation-error';
+                }
                 passwordInput.focus();
                 return;
             }
