@@ -5,9 +5,11 @@
 {% block styles %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"> <!-- Reuse index styles -->
     <style>
+        /* 这些样式已经在fullwidth.css中定义，此处可以删除 */
+        
         .feedback-container {
-            max-width: 700px;
-            margin: 40px auto;
+            width: 100%;
+            margin: 20px auto;
             padding: 30px;
             background-color: #fff;
             border-radius: 8px;
@@ -49,6 +51,47 @@
             resize: vertical;
             min-height: 120px;
         }
+        .rating-group {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .rating-group label {
+            min-width: 150px;
+            margin-right: 15px;
+            margin-bottom: 0;
+        }
+        .rating-group select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 200px;
+        }
+        .rating-group textarea {
+            margin-top: 10px;
+            min-height: 60px;
+            width: 100%;
+        }
+        .feedback-form-wrapper {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .feedback-section {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+        }
+        .feedback-section h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
         .submit-btn {
             background-color: var(--primary-color);
             color: white;
@@ -82,26 +125,102 @@
 
 {% block content %}
     <div class="feedback-container">
-        <h2><i class="fas fa-comments"></i> Send Us Your Feedback</h2>
-        <p style="margin-bottom: 30px; color: #666;">We value your opinion! Let us know what you think or if you encountered any issues.</p>
-        
-        <form id="feedbackForm">
-            <div class="form-group">
-                <label for="name">Name (Optional)</label>
-                <input type="text" id="name" name="name">
-            </div>
-            <div class="form-group">
-                <label for="email">Your Email (Required)</label>
-                <input type="email" id="email" name="email" required>
-            </div>
-            <div class="form-group">
-                <label for="message">Feedback Message (Required)</label>
-                <textarea id="message" name="message" required></textarea>
-            </div>
-            <button type="submit" class="submit-btn" id="submitBtn">
-                <i class="fas fa-paper-plane"></i> Send Feedback
-            </button>
-        </form>
+        <div class="feedback-form-wrapper">
+            <h2><i class="fas fa-comments"></i> Send Your Feedback</h2>
+            <p style="margin-bottom: 30px; color: #666;">We value your opinion! Please tell us about your experience with our interface and any issues you've encountered.</p>
+            
+            <form id="feedbackForm">
+                <div class="form-group">
+                    <label for="name">Name (Optional)</label>
+                    <input type="text" id="name" name="name">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email (Required)</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <!-- UI Feedback -->
+                <div class="feedback-section">
+                    <h3>User Interface Feedback</h3>
+                    <div class="rating-group">
+                        <label>Page Performance:</label>
+                        <select name="ui_performance" required>
+                            <option value="">Please select</option>
+                            <option value="smooth">Smooth</option>
+                            <option value="occasional_lag">Occasional Lag</option>
+                            <option value="frequent_lag">Frequent Lag</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label>Visual Design:</label>
+                        <select name="ui_aesthetics" required>
+                            <option value="">Please select</option>
+                            <option value="excellent">Excellent</option>
+                            <option value="good">Good</option>
+                            <option value="average">Average</option>
+                            <option value="poor">Needs Improvement</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label>Ease of Use:</label>
+                        <select name="ui_usability" required>
+                            <option value="">Please select</option>
+                            <option value="very_easy">Very Easy</option>
+                            <option value="easy">Easy</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="difficult">Difficult</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Overall Experience Feedback - 删除标题行 -->
+                <div class="feedback-section">
+                    <h3>Payment and Experience</h3>
+                    <div class="rating-group">
+                        <label>Willingness to Pay:</label>
+                        <select name="payment_willingness" required>
+                            <option value="">Please select</option>
+                            <option value="very_willing">Very Willing</option>
+                            <option value="willing">Willing</option>
+                            <option value="neutral">Neutral</option>
+                            <option value="unwilling">Unwilling</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-top: -5px; margin-bottom: 15px;">
+                        <textarea name="payment_reason" placeholder="Please explain your reason (Optional)" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="rating-group">
+                        <label>Price Evaluation:</label>
+                        <select name="price_rating" required>
+                            <option value="">Please select</option>
+                            <option value="very_reasonable">Very Reasonable</option>
+                            <option value="reasonable">Reasonable</option>
+                            <option value="high">Somewhat High</option>
+                            <option value="very_high">Too High</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label>Overall Experience:</label>
+                        <select name="overall_experience" required>
+                            <option value="">Please select</option>
+                            <option value="excellent">Excellent</option>
+                            <option value="good">Good</option>
+                            <option value="average">Average</option>
+                            <option value="poor">Needs Improvement</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Additional Comments (Required)</label>
+                    <textarea id="message" name="message" required placeholder="Please describe any other suggestions or issues you've encountered"></textarea>
+                </div>
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <i class="fas fa-paper-plane"></i> Send Feedback
+                </button>
+            </form>
+        </div>
     </div>
 {% endblock %}
 
@@ -116,16 +235,28 @@
             const name = form.elements['name'].value.trim();
             const email = form.elements['email'].value.trim();
             const message = form.elements['message'].value.trim();
+            
+            // Get UI feedback data
+            const ui_performance = form.elements['ui_performance'].value;
+            const ui_aesthetics = form.elements['ui_aesthetics'].value;
+            const ui_usability = form.elements['ui_usability'].value;
+            
+            // Get overall experience feedback data
+            const payment_willingness = form.elements['payment_willingness'].value;
+            const payment_reason = form.elements['payment_reason'].value.trim();
+            const price_rating = form.elements['price_rating'].value;
+            const overall_experience = form.elements['overall_experience'].value;
 
-            if (!email || !message) {
-                toastMessage.error('Please fill in the required fields (Email and Message).');
+            if (!email || !message || !ui_performance || !ui_aesthetics || !ui_usability || 
+                !payment_willingness || !price_rating || !overall_experience) {
+                toastMessage.error('Please fill in all required fields');
                 return;
             }
 
             // Basic email validation
             const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailPattern.test(email)) {
-                toastMessage.error('Please enter a valid email address.');
+                toastMessage.error('Please enter a valid email address');
                 return;
             }
 
@@ -138,7 +269,18 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ name, email, message })
+                body: JSON.stringify({ 
+                    name, 
+                    email, 
+                    message,
+                    ui_performance,
+                    ui_aesthetics,
+                    ui_usability,
+                    payment_willingness,
+                    payment_reason,
+                    price_rating,
+                    overall_experience
+                })
             })
             .then(response => response.json())
             .then(data => {
@@ -147,7 +289,7 @@
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Feedback';
 
                 if (data.success) {
-                    toastMessage.success('Feedback sent successfully! Thank you.');
+                    toastMessage.success('Feedback sent successfully! Thank you for your valuable input.');
                     form.reset(); // Clear the form
                 } else {
                     toastMessage.error(data.message || 'Failed to send feedback. Please try again later.');
@@ -162,4 +304,4 @@
             });
         });
     </script>
-{% endblock %} 
+{% endblock %}

@@ -1164,7 +1164,7 @@ def feedback_page():
     }
     return render_template('feedback.html', **user_info)
 
-def send_feedback_email(name, user_email, message):
+def send_feedback_email(name, user_email, message, feedback_data=None):
     """Sends the collected feedback to the designated admin email."""
     if not sender_email or not sender_password:
         email_logger.error("Email credentials not configured. Cannot send feedback.")
@@ -1173,15 +1173,36 @@ def send_feedback_email(name, user_email, message):
     admin_email = 'djia54995@gmail.com' # Your designated feedback email
     subject = f"Flavor Fusion Feedback from {user_email}"
     
-    # Construct email body
+    # 构造邮件正文，添加新的反馈数据
     body = f"""New feedback received from Flavor Fusion:
 
 Name: {name if name else 'Not provided'}
 Email: {user_email}
 
-Message:
-{message}
 """
+    
+    # 如果有额外的反馈数据，添加到邮件正文
+    if feedback_data:
+        body += "--- UI Feedback ---\n"
+        if 'ui_performance' in feedback_data:
+            body += f"Page Performance: {feedback_data['ui_performance']}\n"
+        if 'ui_aesthetics' in feedback_data:
+            body += f"Visual Design: {feedback_data['ui_aesthetics']}\n"
+        if 'ui_usability' in feedback_data:
+            body += f"Ease of Use: {feedback_data['ui_usability']}\n"
+            
+        body += "\n--- Overall Experience ---\n"
+        if 'payment_willingness' in feedback_data:
+            body += f"Willingness to Pay: {feedback_data['payment_willingness']}\n"
+        if 'payment_reason' in feedback_data and feedback_data['payment_reason']:
+            body += f"Reason: {feedback_data['payment_reason']}\n"
+        if 'price_rating' in feedback_data:
+            body += f"Price Evaluation: {feedback_data['price_rating']}\n"
+        if 'overall_experience' in feedback_data:
+            body += f"Overall Experience: {feedback_data['overall_experience']}\n"
+    
+    # 添加用户的详细留言
+    body += f"\n--- Additional Comments ---\n{message}\n"
     
     msg = MIMEText(body, 'plain', 'utf-8')
     msg['Subject'] = Header(subject, 'utf-8')
@@ -1250,7 +1271,26 @@ def handle_feedback():
     if not validate_email(user_email):
          return jsonify({"success": False, "message": "Invalid email format provided."}), 400
 
-    success, status_message = send_feedback_email(name, user_email, message)
+    # 收集额外的反馈数据
+    feedback_data = {
+        'ui_performance': data.get('ui_performance'),
+        'ui_aesthetics': data.get('ui_aesthetics'),
+        'ui_usability': data.get('ui_usability'),
+        'payment_willingness': data.get('payment_willingness'),
+        'payment_reason': data.get('payment_reason', ''),
+        'price_rating': data.get('price_rating'),
+        'overall_experience': data.get('overall_experience')
+    }
+
+    # 确保所有必需字段都有值
+    required_fields = ['ui_performance', 'ui_aesthetics', 'ui_usability', 
+                       'payment_willingness', 'price_rating', 'overall_experience']
+    
+    for field in required_fields:
+        if not feedback_data.get(field):
+            return jsonify({"success": False, "message": f"Field '{field}' is required."}), 400
+
+    success, status_message = send_feedback_email(name, user_email, message, feedback_data)
 
     if success:
         return jsonify({"success": True})

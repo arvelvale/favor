@@ -1,0 +1,38 @@
+/* 全宽显示样式 */
+
+/* 确保容器占据100%宽度 */
+.navbar, 
+.content, 
+.footer-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* 确保内部容器也是全宽的，但保持一些内边距 */
+.navbar-container, 
+.container, 
+.main-content, 
+.footer-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 20px !important;
+    box-sizing: border-box !important;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .navbar, 
+    .content, 
+    .footer-container,
+    .navbar-container, 
+    .container, 
+    .main-content, 
+    .footer-content {
+        padding: 0 10px !important;
+    }
+} 
