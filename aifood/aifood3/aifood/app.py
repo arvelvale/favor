@@ -10,7 +10,8 @@ import requests
 from datetime import datetime, timedelta
 import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
-from config import db_config, logger
+from config import (db_config, logger, SECRET_KEY, DEBUG, PAYPAL_MODE,
+                    PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_ENABLED, FEEDBACK_EMAIL)
 from database import init_database
 from db_fix import fix_database
 from api_clients import client, generate_recipe_images
@@ -32,7 +33,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 try:
     from verification_email import sender_email, sender_password, smtp_server, smtp_port, validate_email, logger as email_logger
 except ImportError:
-    email_logger.error("Could not import email sending configuration from verification_email.py")
+    logging.getLogger(__name__).error("Could not import email sending configuration from verification_email.py")
     sender_email, sender_password, smtp_server, smtp_port = None, None, None, None
     def validate_email(email): return False
 
@@ -71,7 +72,7 @@ except Exception as e:
 init_database()
 
 # Set Flask session key
-app.secret_key = os.environ.get('SECRET_KEY', '')
+app.secret_key = SECRET_KEY
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static/uploads/avatars')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -84,11 +85,18 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # 配置PayPal SDK
-paypalrestsdk.configure({
-    "mode": "sandbox",  # 沙盒模式，生产环境改为 "live"
-    "client_id": "",
-    "client_secret": ""
-})
+if PAYPAL_ENABLED:
+    paypalrestsdk.configure({
+        "mode": PAYPAL_MODE,
+        "client_id": PAYPAL_CLIENT_ID,
+        "client_secret": PAYPAL_CLIENT_SECRET,
+    })
+
+
+@app.context_processor
+def payment_template_config():
+    # Only the public Client ID is rendered; the Client Secret stays on the server.
+    return {"paypal_client_id": PAYPAL_CLIENT_ID if PAYPAL_ENABLED else ""}
 
 def check_premium_status(user_id):
     """Check if user has an active premium subscription"""
@@ -765,6 +773,8 @@ def premium_page():
 
 @app.route('/api/create-paypal-order', methods=['POST'])
 def create_paypal_order():
+    if not PAYPAL_ENABLED:
+        return jsonify({"success": False, "message": "Payment service is not configured"}), 503
     if 'user_id' not in session:
         return jsonify({"success": False, "message": "Please login first"}), 401
     
@@ -819,15 +829,16 @@ def create_paypal_order():
                 "approval_url": approval_url
             })
         else:
-            logger.error(f"Payment creation failed: {payment.error}")
-            return jsonify({"success": False, "message": f"Failed to create payment: {payment.error}"}), 500
+            logger.error("PayPal rejected payment creation")
+            return jsonify({"success": False, "message": "Failed to create payment"}), 500
     except Exception as e:
-        logger.error(f"Error creating payment: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({"success": False, "message": f"Failed to create payment: {str(e)}"}), 500
+        logger.error("Payment creation failed (%s)", type(e).__name__)
+        return jsonify({"success": False, "message": "Failed to create payment"}), 500
 
 @app.route('/api/capture-paypal-order')
 def capture_paypal_order():
+    if not PAYPAL_ENABLED:
+        return jsonify({"success": False, "message": "Payment service is not configured"}), 503
     if 'user_id' not in session:
         return redirect(url_for('login_page'))
     
@@ -910,11 +921,10 @@ def capture_paypal_order():
                 cursor.close()
                 conn.close()
         else:
-            logger.error(f"Payment execution failed: {payment.error}")
+            logger.error("PayPal rejected payment execution")
             return redirect(url_for('premium_page', error='payment_execution'))
     except Exception as e:
-        logger.error(f"Error processing payment: {str(e)}")
-        logger.error(traceback.format_exc())
+        logger.error("Payment processing failed (%s)", type(e).__name__)
         return redirect(url_for('premium_page', error='payment_processing'))
 
 @app.route('/api/check-subscription-status')
@@ -1170,7 +1180,9 @@ def send_feedback_email(name, user_email, message, feedback_data=None):
         email_logger.error("Email credentials not configured. Cannot send feedback.")
         return False, "Email service is not configured."
 
-    admin_email = 'djia54995@gmail.com' # Your designated feedback email
+    admin_email = FEEDBACK_EMAIL
+    if not admin_email:
+        return False, "Feedback email is not configured."
     subject = f"Flavor Fusion Feedback from {user_email}"
     
     # 构造邮件正文，添加新的反馈数据
@@ -1308,13 +1320,13 @@ if __name__ == "__main__":
     #当使用 Gunicorn 时，不需要 Flask 自带的 app.run()
     try:
         # 尝试使用默认端口5000
-        app.run(debug=True, host='0.0.0.0', port=5000)
+        app.run(debug=DEBUG, host='0.0.0.0', port=5000)
     except Exception as e:
         logger.error(f"Error starting on port 5000: {str(e)}")
         try:
             # 如果5000端口失败，尝试使用5001端口
             logger.info("Trying alternative port 5001...")
-            app.run(debug=True, host='0.0.0.0', port=5001)
+            app.run(debug=DEBUG, host='0.0.0.0', port=5001)
         except Exception as e:
             logger.error(f"Error starting on port 5001: {str(e)}")
             logger.error("Failed to start the application on both ports.")

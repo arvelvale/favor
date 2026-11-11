@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import smtplib
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 import random
 import string
 from email.mime.text import MIMEText
@@ -16,13 +19,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # QQ邮箱SMTP服务器
-smtp_server = 'smtp.qq.com'
-smtp_port = 465  # 使用SSL的端口
+load_dotenv(Path(__file__).with_name('aifood') / '.env')
+smtp_server = os.getenv('SMTP_HOST', 'smtp.qq.com')
+smtp_port = int(os.getenv('SMTP_PORT', '465'))
 
 # 发件人信息 - 使用您提供的QQ邮箱和授权码
-sender_email = '2337590486@qq.com'  # 您的QQ邮箱
-sender_password = ''  # 您的授权码
-sender_name = 'Flavor Fusion'  # 发件人显示名称，简化名称避免中文编码问题
+sender_email = os.getenv('SMTP_USERNAME', '')
+sender_password = os.getenv('SMTP_PASSWORD', '')
+sender_name = os.getenv('SMTP_SENDER_NAME', 'Flavor Fusion')
 
 def validate_email(email):
     """
@@ -63,6 +67,9 @@ def send_verification_email(receiver_email, verification_code, expires_in_minute
     返回:
     tuple: (成功状态bool, 错误信息str或None)
     """
+    if not sender_email or not sender_password:
+        return False, "Email service is not configured."
+
     # 先验证邮箱格式
     if not validate_email(receiver_email):
         return False, "邮箱格式不正确，请输入有效的邮箱地址"
@@ -124,7 +131,7 @@ def send_verification_email(receiver_email, verification_code, expires_in_minute
         
         # 连接到服务器
         server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
-        server.set_debuglevel(1)  # 启用详细日志
+        server.set_debuglevel(0)  # Never log SMTP authentication or message payloads
             
         logger.info(f"正在登录SMTP服务器: {smtp_server}")
         server.login(sender_email, sender_password)
@@ -247,7 +254,7 @@ def send_verification_code(email_address):
 """
 from flask import Flask, request, jsonify, session
 app = Flask(__name__)
-app.secret_key = os.environ['SECRET_KEY']  # 用于会话管理，实际应用中应使用随机生成的密钥
+app.secret_key = os.environ['SECRET_KEY']  # 从部署环境读取，不提供固定回退值
 
 @app.route('/send-verification', methods=['POST'])
 def send_verification():
@@ -321,12 +328,12 @@ if __name__ == "__main__":
     # 直接测试发送邮件功能，跳过验证码生成
     test_email = input("请输入接收验证码的邮箱地址: ")
     verification_code = generate_verification_code(6)
-    print(f"生成验证码: {verification_code}")
+    print("正在发送测试验证码（验证码不写入日志）")
     
     success, error_msg = send_verification_email(test_email, verification_code)
     
     if success:
-        print(f"验证码已成功发送！验证码为: {verification_code}")
+        print("验证码已成功发送，请在收件箱中查看。")
     else:
         print(f"发送失败: {error_msg}")
         print("\n故障排除步骤:")

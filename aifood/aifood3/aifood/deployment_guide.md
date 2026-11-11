@@ -1,17 +1,17 @@
 # AI食谱应用 - 服务器部署指南
 
 ## 服务器信息
-- **服务器地址**：101.36.119.41
+- **服务器地址**：SERVER_HOST
 - **用户名**：root
-- **密码**：
+- **认证**：使用运维单独提供的 SSH 密钥，本文不保存登录口令。
 - **系统版本**：Ubuntu 22.04
 
 ## 一、准备工作
 
 ### 1. 连接到服务器
 ```bash
-ssh root@101.36.119.41
-# 输入密码：
+ssh root@SERVER_HOST
+# 使用独立保存的 SSH 密钥连接；不要将口令写入文档。
 ```
 
 ### 2. 更新系统
@@ -68,7 +68,7 @@ cd "D:\pythonproject\aifood (2)\aifood0.7"
 
 # 使用 scp 或 FileZilla 上传 aifood.zip
 # 例如使用 scp (确保路径正确，可能需要引号):
-scp "D:\pythonproject\aifood (2)\aifood0.7\aifood.zip" root@101.36.119.41:/var/www/
+scp "D:\pythonproject\aifood (2)\aifood0.7\aifood.zip" root@SERVER_HOST:/var/www/
 ```
 
 **服务器操作**:
@@ -145,7 +145,7 @@ EXIT;
 ### 4. 导入数据库（如有本地备份）
 ```bash
 # 如果您有本地数据库备份文件 backup.sql，先上传到服务器
-# scp /path/to/local/backup.sql root@101.36.119.41:/tmp/
+# scp /path/to/local/backup.sql root@SERVER_HOST:/tmp/
 
 # 在服务器上导入
 sudo mysql -u aifood_user -p recipe_app < /tmp/backup.sql
@@ -153,34 +153,25 @@ sudo mysql -u aifood_user -p recipe_app < /tmp/backup.sql
 
 ## 四、修改项目配置
 
-### 1. 修改数据库配置
+### 1. 配置环境变量
+
 ```bash
 cd /var/www/aifood3/aifood
-sudo nano auth.py # 或包含 db_config 的其他配置文件
+cp .env.example .env
+chmod 600 .env
+nano .env
 ```
 
-更新数据库连接信息 (使用您在上一步设置的密码):
-```python
-db_config = {
-    'host': 'localhost',
-    'user': 'aifood_user',
-    'password': 'your_secure_password', # <--- 修改这里
-    'database': 'recipe_app'
-}
-```
-保存并关闭 (Ctrl+X, Y, Enter)。
+填写新的 DEEPSEEK_API_KEY、SECRET_KEY、DB_USER、DB_PASSWORD；不要在 auth.py 或
+config.py 中写密码。数据库账号使用前面创建的专用账号。SECRET_KEY 至少 32 位，
+可用 `python -c 'import secrets; print(secrets.token_urlsafe(48))'` 本地生成。
+管理员密码用 `python scripts/configure_admin.py` 生成哈希并保存到 .env。
+各服务的其他环境变量见 `.env.example`；不要复用旧仓库中的凭据。
 
-### 2. 移除代码中的代理设置
-确保 `app.py` 或 `config.py` 中没有硬编码的代理设置，我们将通过环境变量配置代理。
+### 2. 代理设置
 
-```bash
-sudo nano app.py # 或 config.py
-```
-
-查找类似 `proxy = {'http': ...}` 的行，**将其删除或注释掉**。
-确保类似 `HTTP_PROXY = None` 和 `HTTPS_PROXY = None` 的行也**被删除或注释掉**。
-
-保存并关闭。
+需要代理时在 .env 中设置 HTTP_PROXY、HTTPS_PROXY；不需要时保持为空。
+不要把带口令的代理地址或订阅链接写入代码和文档。
 
 ## 五、配置Clash Meta代理
 
@@ -203,7 +194,7 @@ sudo wget -O Country.mmdb https://github.com/Dreamacro/maxmind-geoip/releases/la
 ### 2. 下载Clash配置文件
 ```bash
 # 使用您的订阅链接
-YOUR_SUB_LINK=""
+YOUR_SUB_LINK="${CLASH_SUBSCRIPTION_URL:?请在部署环境中设置订阅链接}"
 sudo wget -O config.yaml "$YOUR_SUB_LINK"
 
 # 检查文件
@@ -396,7 +387,7 @@ sudo nano /etc/nginx/sites-available/aifood
 ```nginx
 server {
     listen 80;
-    server_name 101.36.119.41 your_domain.com www.your_domain.com; # 替换为您的服务器IP或域名
+    server_name SERVER_HOST your_domain.com www.your_domain.com; # 替换为您的服务器IP或域名
 
     # 增加client_max_body_size以允许更大的上传（如果需要）
     client_max_body_size 20M;
@@ -497,7 +488,7 @@ def verify_user_password(stored_hash, provided_password):
 ## 九、测试和维护
 
 ### 1. 测试应用
-在浏览器中访问 `http://101.36.119.41` (或您的域名)。尝试注册、登录、调用Gemini API等功能。
+在浏览器中访问 `http://SERVER_HOST` (或您的域名)。尝试注册、登录、调用Gemini API等功能。
 
 ### 2. 查看日志
 ```bash
@@ -542,7 +533,7 @@ sudo systemctl restart aifood.service
 ### 5. 更新Clash订阅
 ```bash
 cd /opt/clash-meta
-YOUR_SUB_LINK=""
+YOUR_SUB_LINK="${CLASH_SUBSCRIPTION_URL:?请在部署环境中设置订阅链接}"
 sudo wget -O config.yaml "$YOUR_SUB_LINK"
 sudo systemctl restart clash-meta.service
 ```
@@ -554,13 +545,13 @@ sudo systemctl restart clash-meta.service
 ```bash
 sudo nano /usr/local/bin/backup_db.sh # 脚本放在 /usr/local/bin 更好
 ```
-添加内容 (替换密码):
+先在服务器单独创建权限为 600 的 `/etc/aifood-mysql.cnf` 保存数据库连接信息；该文件不纳入 Git。脚本中不写密码：
 ```bash
 #!/bin/bash
 BACKUP_DIR="/var/backups/mysql"
 sudo mkdir -p $BACKUP_DIR
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-sudo mysqldump -u aifood_user -p'your_secure_password' recipe_app > $BACKUP_DIR/recipe_app_$TIMESTAMP.sql
+sudo mysqldump --defaults-extra-file=/etc/aifood-mysql.cnf recipe_app > $BACKUP_DIR/recipe_app_$TIMESTAMP.sql
 # 设置权限
 sudo chown root:root $BACKUP_DIR/recipe_app_$TIMESTAMP.sql
 sudo chmod 600 $BACKUP_DIR/recipe_app_$TIMESTAMP.sql

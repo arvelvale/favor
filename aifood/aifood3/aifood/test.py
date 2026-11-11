@@ -14,7 +14,7 @@ load_dotenv()
 # 获取代理设置
 proxies = config.get_proxies()
 if proxies:
-    print(f"DeepSeek API 使用代理: {proxies}")
+    print("Proxy configuration enabled")
 
 # 配置OpenAI客户端
 # 注意：我们不直接设置代理，而是通过环境变量设置
@@ -120,7 +120,7 @@ def generate_recipe(ingredients, temperature=0.7, max_tokens=2000):
                 continue
             
             # 其他错误
-            error_msg = f"Error generating recipe: {str(e)}"
+            error_msg = f"Error generating recipe: {type(e).__name__}"
             print(error_msg)
             return "Sorry, an error occurred while generating the recipe. Please try again later."
 
@@ -244,11 +244,9 @@ Format your response using markdown."""
         yield f"data: {json.dumps(done_data)}\n\n".encode('utf-8')
         
     except Exception as e:
-        logger.error(f"Error during DeepSeek API call or streaming: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
+        logger.error("DeepSeek streaming failed (%s)", type(e).__name__)
         error_data = {
             "status": "error",
-            "error": f"Failed to generate recipe: {str(e)}"
+            "error": "Failed to generate recipe"
         }
         yield f"data: {json.dumps(error_data)}\n\n".encode('utf-8')

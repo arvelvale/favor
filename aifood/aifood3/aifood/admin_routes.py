@@ -1,10 +1,11 @@
 from flask import Blueprint, request, jsonify, render_template, session, redirect, url_for
 import mysql.connector
 from datetime import datetime, timedelta
-from werkzeug.security import generate_password_hash # Added for admin_user_add
+from werkzeug.security import generate_password_hash, check_password_hash
+from hmac import compare_digest
 
 # Import necessary configurations and utilities
-from config import db_config, logger
+from config import db_config, logger, ADMIN_USERNAME, ADMIN_PASSWORD_HASH
 from admin_utils import record_user_visit, get_visit_stats, get_member_stats, get_recent_subscriptions
 
 # Create a Blueprint for admin routes
@@ -31,11 +32,21 @@ def admin_login_post():
     username = request.form.get('username')
     password = request.form.get('password')
     
-    # 验证管理员账户 (Replace with a more secure method in production)
-    if username == 'Flavor' and password == '': 
-        session['admin_id'] = 1 # Use a non-guessable ID in production
-        session['admin_name'] = 'Flavor'
-        logger.info(f"Admin user 'Flavor' logged in successfully.")
+    if not ADMIN_USERNAME or not ADMIN_PASSWORD_HASH:
+        return render_template('admin_login.html', error='管理员登录尚未配置'), 503
+
+    # No plaintext or built-in fallback account is accepted.
+    valid_password = False
+    if password and ADMIN_PASSWORD_HASH.startswith(('scrypt:', 'pbkdf2:')):
+        try:
+            valid_password = check_password_hash(ADMIN_PASSWORD_HASH, password)
+        except (ValueError, TypeError):
+            logger.error("Invalid administrator password hash configuration")
+    if username and compare_digest(username.encode(), ADMIN_USERNAME.encode()) and valid_password:
+        session.clear()
+        session['admin_id'] = 1
+        session['admin_name'] = ADMIN_USERNAME
+        logger.info("Administrator logged in successfully")
         return redirect(url_for('admin.admin_dashboard'))
     else:
         logger.warning(f"Admin login failed for username: {username}")

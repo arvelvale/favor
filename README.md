@@ -50,7 +50,7 @@ Flavor Fusion是一个基于AI技术的美食助手与食谱管理系统，为�
 - **数据库**：MySQL
 - **AI模型接口**：DeepSeek API (通过 `api_clients.py` 调用)
 - **支付接口**：PayPal REST SDK (沙盒环境)
-- **邮件服务**：SMTP (用于发送验证码和反馈邮件，需配置 `verification_email.py`)
+- **邮件服务**：SMTP (用于发送验证码和反馈邮件，需配置 SMTP 环境变量)
 - **依赖管理**：pip
 
 ## 项目结构
@@ -147,20 +147,16 @@ aifood/aifood3/aifood/
     ```
 
 4.  **配置环境变量**
-    - 复制 `.env.example` 文件 (如果存在) 或手动创建 `.env` 文件。
-    - 在 `.env` 文件中填入必要的环境变量，至少需要 DeepSeek API 密钥：
-      ```env
-      DEEPSEEK_API_KEY=你的DeepSeek_API密钥
-      SECRET_KEY=设置一个复杂且随机的字符串用于Flask Session加密
-      # 其他可选环境变量，如数据库密码等，虽然可以在 config.py 硬编码，但推荐放入 .env
-      # DB_PASSWORD=你的数据库密码
-      ```
+    - 复制应用目录的 `.env.example` 为同目录的 `.env`，填写全新凭据。
+    - 必填：`DEEPSEEK_API_KEY`、`SECRET_KEY`（随机生成且至少 32 位）、`DB_USER`、`DB_PASSWORD`。
+    - 管理员配置 `ADMIN_USERNAME`、`ADMIN_PASSWORD_HASH`；运行 `python scripts/configure_admin.py` 交互生成密码哈希。没有默认账号密码。
+    - 图片、邮箱、支付和反馈的配置项见 `.env.example`。缺失时对应服务拒绝请求，不回退到旧凭据。
+    - `.env` 已被 Git 忽略；不要提交它或在聊天、截图、日志中展示凭据。
 
-5.  **配置应用设置 (`config.py`)**
-    - 打开 `config.py` 文件。
-    - **数据库连接**：检查 `db_config` 字典中的数据库连接信息 (`host`, `user`, `password`, `database`, `port`) 是否正确。如果数据库密码放在了 `.env` 文件，需要修改 `config.py` 来读取它 (例如: `password=os.getenv('DB_PASSWORD', '默认密码')`)。
-    - **API 代理**：如果需要通过代理访问 DeepSeek API，请设置 `HTTP_PROXY` 和 `HTTPS_PROXY`。
-    - **邮箱服务**：打开 `verification_email.py` 文件，配置你的 SMTP 服务器信息、发件人邮箱和密码。**注意：直接在代码中存储密码存在安全风险，建议使用环境变量或其他更安全的方式管理。**
+5.  **应用设置**
+    - `config.py` 从应用目录读取 `.env`，部署环境变量优先；缺少核心配置时启动报错。
+    - 数据库使用专用低权限账号；通过 DB_HOST、DB_PORT、DB_NAME 配置连接。
+    - 代理通过 HTTP_PROXY、HTTPS_PROXY 配置；默认关闭调试模式。
 
 6.  **创建数据库**
     - 手动连接到你的 MySQL 服务器。
@@ -180,8 +176,8 @@ aifood/aifood3/aifood/
 
 ### 管理员登录
 - 访问 `/admin/login` 进入管理员登录页面。
-- **默认管理员账号**：`Flavor`
-- **默认管理员密码**：`` (首次登录后强烈建议修改密码)
+- **管理员账号**：由 ADMIN_USERNAME 配置。
+- **管理员密码**：仅在 ADMIN_PASSWORD_HASH 中保存哈希，不提供默认密码。
 
 ### 控制面板
 - 访问 `/admin` (登录后)。
@@ -270,7 +266,7 @@ pip freeze > requirements.txt
 ## 注意事项
 - **安全**：
     - **切勿**将敏感信息（如 API 密钥、数据库密码、邮箱密码、Secret Key）直接硬编码在代码中或提交到 Git 仓库。强烈推荐使用环境变量 (`.env`) 或专门的配置管理工具。
-    - 默认管理员密码非常不安全，首次登录后务必修改。
+    - 旧版本中的所有凭据都应在服务后台撤销；历史清理不能替代密钥轮换。
     - 对用户输入进行严格的验证和清理，防止 SQL 注入、XSS 等攻击 (项目中使用了 Bleach 等库，但仍需注意)。
     - 生产环境部署时，确保使用 HTTPS。
 - **错误处理**：应用中有基本的错误处理，但可以进一步完善，提供更友好的用户错误提示，并记录详细的错误日志供排查。

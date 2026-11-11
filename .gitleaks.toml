@@ -1,0 +1,16 @@
+title = "Favor credential checks"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "credential-in-url"
+description = "Credential token embedded in a URL"
+regex = '''(?i)[?&](?:token|access_token|api_key|key)=([a-z0-9_-]{16,})'''
+secretGroup = 1
+
+[[rules]]
+id = "hardcoded-service-password"
+description = "Literal service password or secret"
+regex = '''(?i)(?:smtp_password|sender_password|db_password|client_secret|secret_key)["']?\s*[:=]\s*["']([^"'\s]{8,})["']'''
+secretGroup = 1

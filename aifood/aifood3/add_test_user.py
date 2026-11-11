@@ -5,17 +5,19 @@ import mysql.connector
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 
-# 数据库连接配置
-db_config = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'root',
-    'database': 'recipe_app',
-    'port': 3306
-}
+# Use the same environment-backed database configuration as the application.
+import os
+import sys
+from pathlib import Path
+from getpass import getpass
+sys.path.insert(0, str(Path(__file__).with_name('aifood')))
+from config import db_config
 
 def add_test_user():
     """添加测试会员账号"""
+    password = os.getenv('TEST_USER_PASSWORD') or getpass('测试账号密码（至少 12 位）: ')
+    if len(password) < 12:
+        raise ValueError('测试账号密码至少需要 12 位')
     # 连接数据库
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor(dictionary=True)
@@ -24,7 +26,6 @@ def add_test_user():
         # 用户信息
         username = 'infinity'
         email = 'system@test.com'
-        password = ''
         
         # 检查用户是否存在
         cursor.execute('SELECT id FROM users WHERE username = %s', (username,))

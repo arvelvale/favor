@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Get proxy settings
 proxies = config.get_proxies()
 if proxies:
-    logger.info(f"Proxy settings detected: {proxies}")
+    logger.info("Proxy configuration detected")
     
     # Temporarily save current proxy environment variables
     original_http_proxy = os.environ.pop('HTTP_PROXY', None)
@@ -44,8 +44,9 @@ def generate_recipe_images(recipe_text):
     """Use Gemini API to generate images related to the recipe"""
     model = "gemini-2.0-flash-exp"
     url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
-    params = {"key": ""}  # Replace with your API key
-    headers = {"content-type": "application/json"}
+    if not config.GEMINI_API_KEY:
+        return {"success": False, "error": "Image generation is not configured"}
+    headers = {"content-type": "application/json", "x-goog-api-key": config.GEMINI_API_KEY}
     
     # Always use English
     prompt = f"""Here is a recipe. Please generate detailed step-by-step cooking instructions with images.
@@ -84,7 +85,6 @@ Here is the recipe content:
     try:
         response = requests.post(
             url=url,
-            params=params,
             json=data,
             headers=headers,
             proxies=gemini_proxies,
@@ -92,7 +92,7 @@ Here is the recipe content:
         )
         
         if response.status_code != 200:
-            logger.error(f"Gemini API error: {response.status_code} - {response.text}")
+            logger.error("Gemini API returned status %s", response.status_code)
             return {"error": f"API error: {response.status_code}"}
         
         result = response.json()
@@ -121,6 +121,5 @@ Here is the recipe content:
         }
         
     except Exception as e:
-        logger.error(f"Error generating images: {str(e)}")
-        logger.error(traceback.format_exc())
-        return {"success": False, "error": f"Failed to generate images: {str(e)}"}
+        logger.error("Image generation failed (%s)", type(e).__name__)
+        return {"success": False, "error": "Failed to generate images"}
