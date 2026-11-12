@@ -32,9 +32,10 @@ Gemini 密钥通过请求头传递，依据 [Google 官方接口文档](https://
 此次重写改变了提交 SHA；旧克隆应重新克隆，不能合并或推送旧历史，以免重新引入敏感内容。
 维护与同步记录作为后续普通提交保留。
 
-**公开仓库前的剩余项：**重写后实测 GitHub 仍能按旧 SHA 返回旧 .env 的元数据，
-因此分支历史清理不等于 GitHub 已清除所有旧对象或缓存。仓库保持私有，维护者应先完成上述凭据轮换，
-再核实平台缓存、fork、旧克隆和备份。若风险不能通过轮换解决，可按
+**公开后的剩余安全事项：**仓库于 2026-11-12 经维护者授权改为公开；公开操作不表示旧凭据已经撤销。
+重写后实测 GitHub 仍能按旧 SHA 返回旧 .env 的元数据，
+因此分支历史清理不等于 GitHub 已清除所有旧对象或缓存。维护者仍需完成上述凭据轮换，
+并核实平台缓存、fork、旧克隆和备份。若风险不能通过轮换解决，可按
 [GitHub 官方流程](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)
 向 GitHub Support 申请评估旧对象与缓存清理；是否受理由 GitHub 判断。
 无法从本次静态审计确认旧凭据是否仍有效或是否被外部获取。
