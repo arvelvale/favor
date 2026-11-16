@@ -1,281 +1,95 @@
-# Flavor Fusion - AI美食助手与食谱管理系统
+# Favor · AI 健康管家
 
-Flavor Fusion是一个基于AI技术的美食助手与食谱管理系统，为用户提供个性化的食谱生成、管理、分享，以及会员订阅服务等功能。
+像和朋友聊天一样告诉 Favor 你吃了什么、睡得怎么样、运动了多久，它会自动记录、估算营养、对照你的目标给出建议，并帮你养成小习惯。
 
-## 功能概述
+> 本项目由早期的 Flavor Fusion（AI 食谱生成器，Flask 模板 + jQuery）重构而来。旧版代码保留在 Git 历史中（提交 `734fb0c` 及之前）。
 
-### 用户功能
-- **用户认证**：支持用户名密码注册/登录，以及邮箱验证码注册/登录/重置密码。
-- **AI 食谱生成**：
-    - 输入食材，利用AI（DeepSeek API）生成食谱。
-    - 支持流式输出，逐步展示食谱内容。
-    - 提供参数调整（如创意程度 temperature）。
-    - AI 生成食谱图片（通过 `api_clients.py`）。
-- **食谱管理**：
-    - 保存生成的食谱到个人账户。
-    - 查看、编辑、删除个人食谱。
-    - 食材自动补全提示。
-- **个人中心**：
-    - 查看和编辑个人资料（邮箱、简介）。
-    - 上传和更换头像。
-- **会员系统**：
-    - 提供免费额度和付费会员（月度/年度）。
-    - 非会员每日有生成次数限制，会员无限制。
-    - 通过 PayPal (沙盒环境) 进行支付。
-- **反馈系统**：用户可以提交使用反馈。
+## 页面结构
 
-### 管理功能 (通过 `/admin` 路径访问)
-- **管理员登录**
-- **数据看板**：
-    - 实时访问量统计 (PV/UV) 及环比变化。
-    - 销售额统计及环比变化。
-    - 用户增长统计及环比变化。
-    - 各项数据的历史图表。
-- **用户管理**：
-    - 查看、搜索、编辑、删除用户。
-    - 查看用户详细信息（订阅、食谱等）。
-- **会员管理**：
-    - 查看、搜索会员。
-    - 查看会员统计（总数、类型分布）。
-    - 收入统计和趋势。
-    - 查看即将到期的会员。
-- **访问统计**：查看详细的每日 PV/UV 数据。
-- **销售统计**：查看详细的每日销售额和交易数据。
-- **系统配置**：(待实现)
+| 路径 | 内容 |
+|---|---|
+| `/` | 落地页：自动播放的产品演示、功能介绍、使用步骤 |
+| `/login` `/register` | 登录 / 注册 |
+| `/app` | 工作台总览：热量环、今日建议、四项指标（带 7 天迷你趋势）、周图表、习惯、时间线、体重目标 |
+| `/app/chat` | 完整对话页（含历史对话列表） |
+| `/app/trends` `/app/records` `/app/profile` | 趋势、记录、健康档案 |
 
-## 技术架构
+工作台右侧常驻 Favor 面板：在任意页面说一句话即可记录，记录完成后左侧面板实时刷新；“今日建议”里的条目可一键交给 Favor 展开。
+视觉沿用旧版的暖橙 `#FF6B35` + 深海军蓝 `#2E4057` 色系；动效均为手写 CSS/JS，系统开启“减少动态效果”时自动关闭。
 
-- **前端**：HTML, CSS, JavaScript, Bootstrap 5, jQuery, Chart.js (用于图表)
-- **后端**：Python (Flask 框架)
-- **数据库**：MySQL
-- **AI模型接口**：DeepSeek API (通过 `api_clients.py` 调用)
-- **支付接口**：PayPal REST SDK (沙盒环境)
-- **邮件服务**：SMTP (用于发送验证码和反馈邮件，需配置 SMTP 环境变量)
-- **依赖管理**：pip
+## 功能
 
-## 项目结构
+- **对话式记录（Agent）**：一句“午饭吃了牛肉面加卤蛋，下午跑了 25 分钟”，Favor 会调用工具分别记录饮食和运动，营养按常见份量估算，并给出今日剩余热量与建议。
+- **14 个工具**：记录饮食/饮水/运动/睡眠/体重/心情、删除记错的记录、查看当日汇总、分析 N 天趋势、读写健康档案、创建习惯与打卡。
+- **今日面板**：热量环、三大营养素、饮水/运动/睡眠/体重卡片，一键快捷记录，每日习惯打卡。
+- **趋势**：7 / 30 / 90 天的体重、热量、睡眠、饮水、运动、心情图表。
+- **健康档案**：按 Mifflin-St Jeor 公式计算每日目标（见下方说明），记录体重时自动同步。
+- **安全边界**：不做诊断与用药建议；危险信号提示就医；热量目标有下限，不鼓励极端节食。
+
+## 技术栈
+
+| 层 | 选型 |
+|---|---|
+| 前端 | React 18 + TypeScript + Vite，React Router，lucide 图标，手写 SVG 图表，容器查询布局，Poppins（自托管拉丁子集） |
+| 后端 | Flask 3，SQLite（零配置），会话 Cookie 鉴权 |
+| Agent | OpenAI 兼容接口的 function calling（默认 DeepSeek V4.1 Flash `deepseek-flash`），SSE 流式输出 |
+| 菜品配图 | 阿里云百炼 `multimodal-generation`（默认 `z-image-turbo`，可换 `qwen-image-3.0`），后台生成、下载到本地、仅本人可见 |
 
 ```
-aifood/aifood3/aifood/
-├── app.py                 # Flask 主应用文件，包含核心路由和逻辑
-├── admin_routes.py        # 管理后台相关的路由和逻辑
-├── admin_utils.py         # 管理后台使用的工具函数（统计计算等）
-├── auth.py                # 用户认证（注册、登录、验证码、密码重置）相关逻辑
-├── api_clients.py         # 调用外部 API（如 DeepSeek）的客户端
-├── database.py            # 数据库初始化、表结构创建
-├── db_fix.py              # 数据库结构修复脚本（可选）
-├── config.py              # 应用配置（数据库、API代理、调试模式等）
-├── test.py                # AI 食谱生成的核心逻辑 (被 app.py 调用)
-├── verification_email.py  # 邮件发送配置和逻辑
-├── requirements.txt       # 项目所需的 Python 依赖库
-├── .env                   # 环境变量配置文件（存储敏感信息如 API Key）
-├── README.md              # 项目说明文件 (就是你正在看的这个)
-├── deployment_guide.md    # 部署指南
-├── paypal_config_guide.md # PayPal 配置指南
-├── proxy_guide.md         # 代理配置指南
-├── schema/                # 包含数据库结构的 SQL 文件 (仅作参考，实际由 database.py 创建)
-│   └── users.sql
-├── static/                # 存放 CSS, JavaScript, Images 等静态文件
-│   ├── css/
-│   ├── js/
-│   ├── images/
-│   └── uploads/           # 用户上传文件（如头像）的目录
-│       └── avatars/
-├── templates/             # 存放 Flask 使用的 HTML 模板文件
-│   ├── index.html
-│   ├── login.html
-│   ├── register.html
-│   ├── admin/             # 管理后台相关模板
-│   │   ├── admin_base.html
-│   │   ├── admin_dashboard.html
-│   │   └── ...
-│   └── ...                # 其他用户界面模板
-├── data/                  # 存放数据文件
-│   └── ingredients.json   # 食材数据库 (用于自动补全)
-├── __pycache__/           # Python 缓存目录 (可忽略)
-└── (其他辅助脚本和文件)
-    ├── add_test_user.py
-    ├── create_verification_table.sql
-    ├── init_db.py
-    ├── test_import.py
-    └── verify_fix.py
+server/            Flask API
+  app.py           路由、鉴权、SSE 对话接口；生产环境同时托管 web/dist
+  health.py        领域逻辑：目标计算、记录校验、汇总、趋势、习惯
+  agent/tools.py   Agent 工具定义与执行器
+  agent/runner.py  Agent 主循环（流式 → 工具 → 回填 → 最终回复）
+  agent/prompts.py 系统提示词（动态注入时间、档案、今日概况）
+web/               React 前端
+tests/             后端回归测试（假模型客户端，不访问网络）
 ```
-*注意：项目外层还有 `aifood/aifood3/venv/` 或 `.venv/` 等虚拟环境目录，这里未列出。*
 
-## 数据库结构
+## 本地运行
 
-系统使用 MySQL 数据库，包含以下主要数据表（具体字段和约束由 `database.py` 定义和创建）：
+需要 Python 3.11+ 与 Node.js 18+。
 
-- `users`: 存储用户基本信息（用户名、邮箱、密码哈希、头像、简介等）。
-- `user_recipes`: 存储用户保存的食谱（名称、内容、食材、创建时间等）。
-- `user_subscriptions`: 存储用户的会员订阅记录（用户ID、计划类型、起止日期、交易ID、状态等）。
-- `usage_limits`: 存储非会员用户的每日 AI 功能使用次数。
-- `email_verification_codes`: 存储邮箱验证码及其状态。
-- `visit_stats`: 按日存储网站的页面浏览量 (PV) 和独立访客数 (UV)。
-- `user_visits`: 记录每个用户的访问日期和次数。
-- `sales_stats`: 按日存储销售额和交易数量。
-
-## 安装与运行
-
-### 环境要求
-- Python 3.8+
-- MySQL 8.0+
-- pip (Python 包管理器)
-
-### 安装步骤
-
-1.  **克隆代码库**
-    ```bash
-    # 替换 <repository-url> 为你的仓库地址
-    git clone <repository-url>
-    cd aifood/aifood3/aifood # 进入项目核心目录
-    ```
-
-2.  **创建并激活虚拟环境** (推荐)
-    ```bash
-    python -m venv venv
-    # Windows
-    venv\Scripts\activate
-    # macOS/Linux
-    source venv/bin/activate
-    ```
-    *如果你使用的是其他虚拟环境工具（如 conda），请相应调整命令。*
-
-3.  **安装依赖**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **配置环境变量**
-    - 复制应用目录的 `.env.example` 为同目录的 `.env`，填写全新凭据。
-    - 必填：`DEEPSEEK_API_KEY`、`SECRET_KEY`（随机生成且至少 32 位）、`DB_USER`、`DB_PASSWORD`。
-    - 管理员配置 `ADMIN_USERNAME`、`ADMIN_PASSWORD_HASH`；运行 `python scripts/configure_admin.py` 交互生成密码哈希。没有默认账号密码。
-    - 图片、邮箱、支付和反馈的配置项见 `.env.example`。缺失时对应服务拒绝请求，不回退到旧凭据。
-    - `.env` 已被 Git 忽略；不要提交它或在聊天、截图、日志中展示凭据。
-
-5.  **应用设置**
-    - `config.py` 从应用目录读取 `.env`，部署环境变量优先；缺少核心配置时启动报错。
-    - 数据库使用专用低权限账号；通过 DB_HOST、DB_PORT、DB_NAME 配置连接。
-    - 代理通过 HTTP_PROXY、HTTPS_PROXY 配置；默认关闭调试模式。
-
-6.  **创建数据库**
-    - 手动连接到你的 MySQL 服务器。
-    - 创建项目所需的数据库（数据库名称在 `config.py` 的 `db_config` 中定义，默认为 `recipe_app`）：
-      ```sql
-      CREATE DATABASE IF NOT EXISTS recipe_app DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-      ```
-    *注意：数据表结构将在首次运行应用时由 `database.py` 中的 `init_database()` 函数自动创建。*
-
-7.  **运行应用**
-    ```bash
-    python app.py
-    ```
-    应用启动后，会监听 `0.0.0.0` 地址的指定端口（默认为 5000 或 5001）。你可以在浏览器中访问 `http://localhost:5000` (或相应端口) 来查看应用。
-
-## 使用说明
-
-### 管理员登录
-- 访问 `/admin/login` 进入管理员登录页面。
-- **管理员账号**：由 ADMIN_USERNAME 配置。
-- **管理员密码**：仅在 ADMIN_PASSWORD_HASH 中保存哈希，不提供默认密码。
-
-### 控制面板
-- 访问 `/admin` (登录后)。
-
-## 数据统计说明
-
-### 访问量统计
-本系统采用真实用户访问数据统计，不使用随机数据或固定数据。访问统计实现方式：
-
-1. 系统使用两个表来记录访问数据：
-   - `visit_stats`: 记录每日的总页面浏览量(PV)和独立访客数(UV)
-   - `user_visits`: 记录每个用户的访问历史
-
-2. 在每次HTTP请求前，通过Flask的`@app.before_request`装饰器自动调用`track_user_visits`函数
-   ```python
-   @app.before_request
-   def track_user_visits():
-       if 'user_id' in session:
-           record_user_visit(session['user_id'])
-   ```
-
-3. `record_user_visit`函数记录用户访问数据并更新总体统计
-   - 更新用户的最后登录时间
-   - 记录或更新用户当天的访问次数
-   - 更新全站的总访问量和独立访客数
-
-4. 显示原则：
-   - 当没有访问记录时，显示为0，不使用随机数或默认值填充
-   - 所有统计数据来源于数据库中的实际记录
-   - 管理界面明确标注数据来源为"真实数据"
-
-### PayPal支付系统
-当前系统使用PayPal沙盒环境进行测试，这不是真实的支付环境。如需部署到生产环境并接收真实支付：
-
-1. 需要创建PayPal商业账户
-2. 在PayPal开发者平台创建生产环境应用并获取API凭证
-3. 修改系统配置从沙盒模式切换到生产模式
-4. 详细配置步骤参见项目根目录下的`paypal_config_guide.md`文件
-
-## 系统维护
-
-### 数据库备份
-建议定期备份数据库，特别是在用户量增长或进行重要更新前：
 ```bash
-# 将 [用户名], [密码], [数据库名], backup.sql 替换为实际值
-# 如果密码包含特殊字符，可能需要特殊处理或在提示时输入
-mysqldump -u [用户名] -p[密码] [数据库名] > backup.sql
-# 或者省略 -p[密码]，命令执行后会提示输入密码
-mysqldump -u [用户名] -p [数据库名] > backup.sql
+cd server
+pip install -r requirements.txt
+cp .env.example .env    # 填写 SECRET_KEY 和 LLM_API_KEY
+python app.py           # http://127.0.0.1:5000
 ```
 
-### 日志文件
-应用运行日志会输出到控制台。对于生产环境部署，建议配置日志记录到文件，并定期轮转和归档日志文件。可以修改 `config.py` 或 `app.py` 中的日志配置来实现。
+开发前端（热更新，/api 代理到 5000 端口）：
 
-### 依赖更新
-定期检查并更新项目依赖库，以获取安全补丁和新功能：
 ```bash
-pip list --outdated
-pip install --upgrade <package_name>
-# 更新后记得重新生成 requirements.txt
-pip freeze > requirements.txt
+cd web
+npm install
+npm run dev             # http://localhost:5173
 ```
 
-### 访问统计数据
-管理员后台可以查看真实的访问统计数据，包括：
-- 每日页面浏览量(PV)和独立访客数(UV)
-- 总访问量及增长率
-- 用户访问记录
+生产部署：`cd web && npm run build` 后只需启动 `server/app.py`（建议用 gunicorn/waitress 等 WSGI 服务器并置于 HTTPS 反向代理后，同时设置 `SECURE_COOKIES=true`）。
 
-### 订阅数据
-管理员后台可以查看订阅统计和历史记录：
-- 活跃会员数量（总体/月度/年度）
-- 即将到期的会员数
-- 总收入和近期交易
+不配置 `LLM_API_KEY` 时应用照常运行，只有对话功能不可用；手动记录、趋势、档案均可使用。
 
-### 清理旧数据 (可选)
-根据需要，可以考虑定期清理或归档旧的访问记录 (`user_visits`) 或验证码记录 (`email_verification_codes`)，以控制数据库大小。
+配置 `DASHSCOPE_API_KEY` 后，Favor 给出菜谱或搭配建议时会为主菜生成一张成品示意图：每轮最多 1 张、每人每天默认 10 张（`IMAGE_DAILY_LIMIT`），
+失败（欠费、审核未通过等）会在卡片里给出原因且不计入额度。百炼返回的图片链接 24 小时失效，所以服务端会立即下载保存到 `server/data/images/`。
 
-### 2025年4月16日更新
-1. 增加了用户反馈界面
-2. 未登录用户在使用create recipe功能时会跳转至登录页面
-3. 解决了password输入处警告重复的问题
-4. 在验证密码是否相同时，把passwords match格式修改为和valid username一样的样式
-5. 修改了不正确的年份2023
+## 目标计算
 
-## 注意事项
-- **安全**：
-    - **切勿**将敏感信息（如 API 密钥、数据库密码、邮箱密码、Secret Key）直接硬编码在代码中或提交到 Git 仓库。强烈推荐使用环境变量 (`.env`) 或专门的配置管理工具。
-    - 旧版本中的所有凭据都应在服务后台撤销；历史清理不能替代密钥轮换。
-    - 对用户输入进行严格的验证和清理，防止 SQL 注入、XSS 等攻击 (项目中使用了 Bleach 等库，但仍需注意)。
-    - 生产环境部署时，确保使用 HTTPS。
-- **错误处理**：应用中有基本的错误处理，但可以进一步完善，提供更友好的用户错误提示，并记录详细的错误日志供排查。
-- **性能**：随着用户量和数据量的增长，可能需要对数据库查询、API 调用等进行性能优化，例如添加数据库索引、使用缓存等。
-- **测试**：项目中缺少自动化测试（单元测试、集成测试）。添加测试可以显著提高代码质量和系统稳定性。
-- **部署**：`deployment_guide.md` 提供了部署建议，生产环境通常使用 Gunicorn/uWSGI + Nginx/Apache 等组合进行部署。
+- 基础代谢 BMR（Mifflin-St Jeor）：男 `10×体重 + 6.25×身高 − 5×年龄 + 5`，女 `… − 161`
+- 日常消耗 TDEE = BMR × 活动系数（1.2 / 1.375 / 1.55 / 1.725 / 1.9）
+- 热量目标：减脂 15% 缺口 → `TDEE × 0.85`；增肌 10% 盈余 → `TDEE × 1.10`；其余 `× 1.0`
+- 安全下限：不低于 BMR，且女性 ≥ 1200 kcal、男性 ≥ 1500 kcal
+- 蛋白质：减脂 1.6 g/kg，增肌 1.8 g/kg，其余 1.2 g/kg；饮水 33 ml/kg（1500–3500 ml）
 
-## 贡献指南 (可选)
-如果你希望其他人参与贡献，可以在这里添加贡献指南，例如代码风格、提交流程等。
+这些都是通用估算，不构成医疗建议。
 
-## License (可选)
-说明项目的许可证信息。
+## 测试
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+覆盖配置安全、账号与数据隔离、记录校验、目标计算方向与下限、Agent 工具循环（并行工具调用、参数分片、历史配对、工具报错回传、模型异常不泄露细节）。
+
+## 安全
+
+见 [SECURITY.md](SECURITY.md)。
