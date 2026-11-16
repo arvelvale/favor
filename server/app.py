@@ -13,6 +13,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import health
 from agent import runner
 from config import Settings, logger
+from rag import retriever as rag_retriever
 from db import close_db, connect, get_db, init_db
 from health import ValidationError
 from images import DashScopeImageClient, ImageService, public_image
@@ -107,7 +108,8 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
     @app.get("/api/meta")
     def meta():
         return jsonify({"llm_enabled": settings.llm_enabled, "model": settings.llm_model if settings.llm_enabled else None,
-                        "image_enabled": image_service is not None})
+                        "image_enabled": image_service is not None,
+                        "rag_enabled": settings.rag_enabled and rag_retriever.is_enabled()})
 
     @app.post("/api/auth/register")
     def register():

@@ -4,6 +4,7 @@
   {"type": "delta", "content": "..."}          文本增量
   {"type": "tool", "name": "...", "status": "running"}
   {"type": "card", "card": {...}}               工具执行产生的结构化卡片
+  {"type": "citation_audit", "audit": {...}}    引用编号自检结果（仅当有 sources 卡片）
   {"type": "done", "title": "..."}              本轮结束（附会话标题）
   {"type": "error", "message": "..."}
 """
@@ -11,6 +12,9 @@ import json
 from datetime import datetime
 
 from config import logger
+
+from rag import retriever as rag_retriever
+from rag import prompts as rag_prompts
 
 from . import tools
 from .prompts import build_system_prompt
@@ -22,7 +26,7 @@ TOOL_LABELS = {
     "log_weight": "记录体重", "log_mood": "记录心情", "delete_record": "删除记录",
     "get_day_summary": "查看当日数据", "get_trends": "分析趋势", "list_records": "查找记录",
     "get_profile": "读取档案", "update_profile": "更新档案", "add_habit": "创建习惯", "check_habit": "习惯打卡",
-    "generate_food_image": "生成菜品图",
+    "generate_food_image": "生成菜品图", "search_nutrition": "查询营养资料",
 }
 
 
@@ -86,7 +90,8 @@ def run_turn(conn, client, model: str, user_id: int, conversation_id: int, user_
              images=None):
     """执行一轮对话，产出事件 dict。conn 由调用方创建，本函数负责提交。"""
     ctx = tools.ToolContext(conn=conn, user_id=user_id, now=now, images=images)
-    tool_schemas = tools.schemas(image_enabled=images is not None)
+    tool_schemas = tools.schemas(image_enabled=images is not None,
+                                 rag_enabled=rag_retriever.is_enabled())
     history = load_history(conn, conversation_id)
     save_message(conn, conversation_id, "user", user_text)
     conn.execute("UPDATE conversations SET updated_at=datetime('now') WHERE id=?", (conversation_id,))
@@ -98,6 +103,8 @@ def run_turn(conn, client, model: str, user_id: int, conversation_id: int, user_
     conn.commit()
 
     history.append({"role": "user", "content": user_text})
+    # 累积本轮出现过的引用来源，供最终回答做「编号是否合法/是否漏引」自检
+    sources_accum = []
     try:
         for _ in range(MAX_ROUNDS):
             messages = [{"role": "system", "content": build_system_prompt(conn, user_id, now, image_enabled=images is not None)}, *history]
@@ -109,8 +116,15 @@ def run_turn(conn, client, model: str, user_id: int, conversation_id: int, user_
                     _, content, tool_calls = event
 
             if not tool_calls:
-                save_message(conn, conversation_id, "assistant", content)
+                # 引用事后自检：只有本轮真的查过资料（有 sources）才有意义。
+                # 检查模型最终回答里的 [n] 是否都能在资料中找到出处、有无漏引。
+                audit = None
+                if sources_accum:
+                    audit = rag_prompts.verify_citations(content, sources_accum)
+                save_message(conn, conversation_id, "assistant", content, events=[audit] if audit else None)
                 conn.commit()
+                if audit is not None:
+                    yield {"type": "citation_audit", "audit": audit}
                 yield {"type": "done", "title": title}
                 return
 
@@ -127,6 +141,8 @@ def run_turn(conn, client, model: str, user_id: int, conversation_id: int, user_
                     result, cards = {"ok": False, "error": f"工具执行失败（{type(exc).__name__}）"}, []
                 for card in cards:
                     yield {"type": "card", "card": card}
+                    if card.get("type") == "sources" and card.get("sources"):
+                        sources_accum.extend(card["sources"])
                 results.append((call["id"], result, cards))
 
             # assistant(tool_calls) 与全部 tool 结果一起落库，保证历史回放时配对完整
@@ -169,10 +185,16 @@ def display_messages(conn, conversation_id: int) -> list[dict]:
             current = None
             continue
         if current is None:
-            current = {"id": r["id"], "role": "assistant", "content": "", "cards": []}
+            current = {"id": r["id"], "role": "assistant", "content": "", "cards": [], "citation_audit": None}
             bubbles.append(current)
         if r["role"] == "tool":
             current["cards"].extend(json.loads(r["events"]) if r["events"] else [])
-        elif r["content"]:
-            current["content"] = f"{current['content']}\n\n{r['content']}" if current["content"] else r["content"]
+        else:
+            # assistant 的 events 里存的是引用自检结果（一条 dict），取出来供前端回放
+            if r["events"]:
+                saved = json.loads(r["events"])
+                if isinstance(saved, list) and saved and isinstance(saved[0], dict) and "cited" in saved[0]:
+                    current["citation_audit"] = saved[0]
+            if r["content"]:
+                current["content"] = f"{current['content']}\n\n{r['content']}" if current["content"] else r["content"]
     return bubbles

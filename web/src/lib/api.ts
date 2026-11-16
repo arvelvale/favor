@@ -54,16 +54,57 @@ export interface ProfilePayload {
 
 export interface Conversation { id: number; title: string; updated_at: string }
 
+/** 一条营养资料引用：编号、出处、证据等级、摘要等，字段与后端 sources_payload 对齐。 */
+export interface NutritionSource {
+  citation: number
+  title: string
+  heading?: string
+  publisher: string
+  published: string
+  url: string
+  snippet: string
+  score?: number
+  evidence_level: string
+  evidence_class: 'guide' | 'gov' | 'paper' | 'popular' | string
+  evidence_label: string
+  audience?: string
+}
+
 export type Card =
   | { type: 'record'; action: 'logged' | 'deleted'; kind: Kind; record_id: number; title: string; at: string }
   | { type: 'profile'; title: string; fields: string[]; calories: number; water_ml: number }
   | { type: 'habit'; action: 'created' | 'checked' | 'unchecked'; title: string }
   | { type: 'trend'; days: number }
   | { type: 'image'; image_id: number; title: string }
+  | {
+      type: 'sources'
+      sources: NutritionSource[]
+      no_evidence: boolean
+      risk_terms: string[]
+      risk_notice: string
+      disclaimer: string
+    }
+
+/** 引用事后自检结果：核对回答里的 [n] 是否都能在本次资料中找到出处。 */
+export interface CitationAudit {
+  cited: number[]
+  valid: number[]
+  invalid: number[]
+  uncited: number[]
+  ok: boolean
+  level?: 'ok' | 'warn' | 'error'
+  notice: string
+}
 
 export interface ImageMeta { id: number; title: string; status: 'pending' | 'ready' | 'failed'; error: string | null }
 
-export interface ChatMessage { id: number | string; role: 'user' | 'assistant'; content: string; cards: Card[] }
+export interface ChatMessage {
+  id: number | string
+  role: 'user' | 'assistant'
+  content: string
+  cards: Card[]
+  citation_audit?: CitationAudit | null
+}
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) { super(message) }
@@ -107,6 +148,7 @@ export type StreamEvent =
   | { type: 'delta'; content: string }
   | { type: 'tool'; name: string; label: string; status: 'running' }
   | { type: 'card'; card: Card }
+  | { type: 'citation_audit'; audit: CitationAudit }
   | { type: 'done'; title: string }
   | { type: 'error'; message: string }
 
