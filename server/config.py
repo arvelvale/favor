@@ -51,7 +51,7 @@ class Settings:
         # 知识库 RAG：开关与检索阈值。留空时用 or 兜底默认值（getenv 第二参数对空串无效）。
         self.rag_enabled = (os.getenv("RAG_ENABLED") or "true").strip().lower() in ("1", "true", "yes", "on")
         self.rag_top_k = max(1, int(os.getenv("RAG_TOP_K") or "4"))
-        self.rag_min_abs_score = max(0.0, float(os.getenv("RAG_MIN_ABS_SCORE") or "10.0"))
+        self.rag_min_abs_score = max(0.0, float(os.getenv("RAG_MIN_ABS_SCORE") or "12.0"))
         self.rag_kb_dir = os.getenv("RAG_KB_DIR") or str(BASE_DIR / "rag" / "kb")
 
         # 留空时用 or 兜底默认值（getenv 第二参数对空串无效，与 RAG 配置同理）。

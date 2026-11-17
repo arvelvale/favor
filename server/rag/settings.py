@@ -21,9 +21,11 @@ RAG_TOP_K = max(1, int(os.getenv("RAG_TOP_K", "4")))
 RAG_MIN_REL_SCORE = min(1.0, max(0.0, float(os.getenv("RAG_MIN_REL_SCORE", "0.55"))))
 
 # 绝对得分门槛：最高分低于此值即视为「知识库无可靠依据」。
-# 默认值 10.0 来自 28 题离线评测的实测分界（正常题最低 11.68，无关题 3.43/7.12）。
+# 默认值 12.0 来自 44 篇语料下 43 题离线评测的实测分界：
+# 误命中对照题 11.50（辟谣语料的"药物相互作用"擦边命中用药剂量题），
+# 正常题最低 13.06（Q07 每天喝多少水），取 12.0 两头各留约 1 分缓冲。
 # 语料规模大幅变化后应重跑 python -m rag.evaluate 复核此值。
-RAG_MIN_ABS_SCORE = max(0.0, float(os.getenv("RAG_MIN_ABS_SCORE", "10.0")))
+RAG_MIN_ABS_SCORE = max(0.0, float(os.getenv("RAG_MIN_ABS_SCORE") or "12.0"))
 
 # 单个片段最大字符数
 RAG_CHUNK_CHARS = max(120, int(os.getenv("RAG_CHUNK_CHARS", "420")))
@@ -37,3 +39,7 @@ RAG_HEADING_BOOST = float(os.getenv("RAG_HEADING_BOOST") or "0.8")
 RAG_TAG_BOOST = float(os.getenv("RAG_TAG_BOOST") or "0.8")
 # 重排候选池放大倍数：候选数 = top_k × 此值，放大后才不会把该排前面的片段挡在池外。
 RAG_RERANK_POOL_MULT = max(1, int(os.getenv("RAG_RERANK_POOL_MULT") or "3"))
+
+# 多查询 RRF 融合常数：标准值 60（越小越偏向各路第一名）。
+# 只在 search_multi 用到；单查询 search 不受影响。
+RAG_RRF_K = max(1, int(os.getenv("RAG_RRF_K") or "60"))

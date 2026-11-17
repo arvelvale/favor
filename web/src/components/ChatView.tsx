@@ -32,7 +32,10 @@ const mdComponents: Components = {
       return (
         <a className="citation-chip" href={href} title="查看出处" onClick={e => {
           e.preventDefault()
-          const el = e.currentTarget.closest('.msg')?.querySelector<HTMLElement>(`[data-cite="${hit[1]}"]`)
+          const num = hit[1]
+          const el = Array.from(
+            e.currentTarget.closest('.msg')?.querySelectorAll<HTMLElement>('[data-cite]') || []
+          ).find(node => node.dataset.cite === num || (node.dataset.cites || '').split(',').includes(num))
           if (!el) return
           el.scrollIntoView({ behavior: 'smooth', block: 'center' })
           el.classList.add('cite-flash')
@@ -290,27 +293,42 @@ function SourcesCard({ card }: { card: Extract<Card, { type: 'sources' }> }) {
       </div>
     )
   }
+  // 同一篇文章可能被切成多段命中，标题/出处完全相同。按标题+链接合并成一张卡，
+  // 但保留各自编号——回答里的 [1][2] 角标仍能跳到这篇，只是不再重复显示。
+  type Group = { sources: typeof card.sources; key: string }
+  const groups: Group[] = []
+  const byKey = new Map<string, Group>()
+  for (const s of card.sources) {
+    const key = `${s.title}||${s.url}`
+    let g = byKey.get(key)
+    if (!g) { g = { sources: [], key }; byKey.set(key, g); groups.push(g) }
+    g.sources.push(s)
+  }
   return (
     <div className="sources-card">
-      <div className="sources-head"><BookOpen size={14} />参考资料 <span className="sources-count">{card.sources.length} 条依据</span></div>
+      <div className="sources-head"><BookOpen size={14} />参考资料 <span className="sources-count">{groups.length} 条依据</span></div>
       {card.risk_notice && (
         <div className="sources-risk"><CircleAlert size={14} />{card.risk_notice}</div>
       )}
       <ol className="sources-list">
-        {card.sources.map(s => (
-          <li className="source-item" data-cite={s.citation} key={s.citation}>
-            <span className="source-num">{s.citation}</span>
-            <div className="source-body">
-              <a className="source-title" href={s.url} target="_blank" rel="noreferrer">{s.title}<ExternalLink size={12} /></a>
-              <div className="source-sub">
-                <span className={`ev-badge ev-${s.evidence_class}`}>{s.evidence_label}</span>
-                <span className="source-pub">{s.publisher}{s.published ? ` · ${s.published}` : ''}</span>
+        {groups.map(g => {
+          const first = g.sources[0]
+          const nums = g.sources.map(s => s.citation)
+          return (
+            <li className="source-item" data-cite={first.citation} data-cites={nums.join(',')} key={g.key}>
+              <span className="source-num">{nums.join('·')}</span>
+              <div className="source-body">
+                <a className="source-title" href={first.url} target="_blank" rel="noreferrer">{first.title}<ExternalLink size={12} /></a>
+                <div className="source-sub">
+                  <span className={`ev-badge ev-${first.evidence_class}`}>{first.evidence_label}</span>
+                  <span className="source-pub">{first.publisher}{first.published ? ` · ${first.published}` : ''}</span>
+                </div>
+                {g.sources.map(s => <p className="source-snippet" key={s.citation}>{s.snippet}</p>)}
+                {first.audience && <p className="source-audience">适用：{first.audience}</p>}
               </div>
-              <p className="source-snippet">{s.snippet}</p>
-              {s.audience && <p className="source-audience">适用：{s.audience}</p>}
-            </div>
-          </li>
-        ))}
+            </li>
+          )
+        })}
       </ol>
       <p className="sources-disclaimer">{card.disclaimer}</p>
     </div>
