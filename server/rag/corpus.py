@@ -131,3 +131,36 @@ def load_chunks(kb_dir=None):
             size += len(line)
         _flush(buf, heading, doc, chunks)
     return chunks
+
+
+def keyword_menu(kb_dir=None, min_doc_freq=2):
+    """从语料自动生成「关键词菜单」，供 search_nutrition 工具描述使用。
+
+    取「全部文档标题 + 出现在至少 min_doc_freq 篇文档的标签」，过滤纯数字/单位噪声。
+    目的不是参与检索打分，而是告诉模型知识库实际用哪些词：用户说「西红柿」时，
+    模型看到菜单里的「番茄」就会换成这个词去查，弥补 BM25 不认识同义的短板。
+
+    语料增减后菜单自动跟着变，无需手工维护；检索器、门槛、切块逻辑均不受影响。
+    """
+    import re
+    from collections import Counter
+
+    docs = load_documents(kb_dir)
+    titles = [d.meta.get("title", "").strip() for d in docs]
+    titles = [t for t in titles if t]
+
+    tag_freq = Counter()
+    for doc in docs:
+        # 同一文档内标签去重后再计数，避免重复标签抬高词频
+        seen = set()
+        for tag in doc.meta.get("tags", "").split(","):
+            tag = tag.strip()
+            if tag and tag not in seen:
+                seen.add(tag)
+                tag_freq[tag] += 1
+    hot_tags = [t for t, count in tag_freq.items() if count >= min_doc_freq]
+
+    terms = set(titles) | set(hot_tags)
+    # 过滤 "12种" "25种" 这类纯数字/单位标签
+    noise_re = re.compile(r"[\d.]+[a-zA-Z%克毫克种分钟]?")
+    return sorted(t for t in terms if not noise_re.fullmatch(t))

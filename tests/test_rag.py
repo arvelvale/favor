@@ -17,8 +17,8 @@ from rag import prompts as rag_prompts  # noqa: E402
 from rag import retriever as rag_retriever  # noqa: E402
 from rag import settings as rag_settings  # noqa: E402
 from rag.cli import cmd_ingest  # noqa: E402
-from rag.corpus import load_chunks, validate_documents  # noqa: E402
-from rag.glossary import expand_query  # noqa: E402
+from rag.corpus import keyword_menu, load_chunks, validate_documents  # noqa: E402
+from rag.glossary import expand_query, tool_description  # noqa: E402
 from rag.tokenizer import tokenize  # noqa: E402
 
 
@@ -38,6 +38,21 @@ class CorpusTests(unittest.TestCase):
     def test_absolute_score_threshold_configured(self):
         self.assertGreaterEqual(rag_settings.RAG_MIN_ABS_SCORE, 10.0,
                                 "绝对分数门槛过低会让无关问题误命中")
+
+    def test_keyword_menu_from_corpus(self):
+        """关键词菜单从语料自动生成：含高频标签、滤掉数字噪声。"""
+        menu = keyword_menu()
+        self.assertGreaterEqual(len(menu), 50, "菜单词数过少，词表提取可能失效")
+        self.assertTrue({"蛋白质", "全谷物", "蔬菜", "膳食纤维"}.issubset(menu),
+                        "核心高频词应自动进入菜单")
+        for noise in ("12种", "25种"):
+            self.assertNotIn(noise, menu, "纯数字/单位噪声不应进入菜单")
+
+    def test_tool_description_contains_menu(self):
+        """search_nutrition 的工具描述里带上了语料用词菜单。"""
+        desc = tool_description()
+        self.assertIn("检索时请优先使用知识库实际用词", desc)
+        self.assertIn("番茄" if "番茄" in keyword_menu() else "蛋白质", desc)
 
 
 class RetrievalTests(unittest.TestCase):

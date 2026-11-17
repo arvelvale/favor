@@ -8,6 +8,7 @@ from datetime import date, datetime, timedelta
 
 import health
 from health import ValidationError
+from rag import glossary as rag_glossary
 from rag import prompts as rag_prompts
 from rag import retriever as rag_retriever
 
@@ -261,10 +262,7 @@ def generate_food_image(ctx, args):
             [{"type": "image", "image_id": image["id"], "title": image["title"]}])
 
 
-@tool("search_nutrition",
-      "查询权威营养与膳食资料（中国居民膳食指南、国家卫健委等）。当用户问到具体营养数值、"
-      "推荐摄入量、某种食物的健康作用、膳食指南建议或特殊人群饮食时调用。"
-      "返回带 [编号] 的资料片段；回答中的营养数值与结论必须引用这些编号，查不到就说明暂无可靠依据。",
+@tool("search_nutrition", rag_glossary.tool_description(),
       {"query": {"type": "string", "description": "要查询的营养问题，如 每天吃多少蔬菜、菠菜补铁吗、孕妇能喝牛奶吗"}},
       ["query"])
 def search_nutrition(ctx, args):

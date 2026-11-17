@@ -61,3 +61,29 @@ def expand_query(query):
     if not extras:
         return query or ""
     return (query or "") + " " + " ".join(extras)
+
+
+SEARCH_NUTRITION_BASE = (
+    "查询权威营养与膳食资料（中国居民膳食指南、国家卫健委等）。当用户问到具体营养数值、"
+    "推荐摄入量、某种食物的健康作用、膳食指南建议或特殊人群饮食时调用。"
+    "返回带 [编号] 的资料片段；回答中的营养数值与结论必须引用这些编号，查不到就说明暂无可靠依据。"
+)
+
+
+def tool_description():
+    """拼出 search_nutrition 的工具描述：基础说明 + 从语料自动生成的关键词菜单。
+
+    菜单告诉模型知识库实际用哪些词（如语料写「番茄」而非「西红柿」），
+    让模型检索时把用户口语换成语料用词，弥补 BM25 不认识同义的短板。
+    语料增减后菜单自动更新，无需手工维护词表。
+    """
+    from .corpus import keyword_menu  # 延迟导入，避免模块初始化顺序问题
+
+    menu = keyword_menu()
+    if not menu:
+        return SEARCH_NUTRITION_BASE
+    return (
+        SEARCH_NUTRITION_BASE
+        + " 检索时请优先使用知识库实际用词（用户说法与下面不同时，换成这里的说法再查）："
+        + "、".join(menu) + "。"
+    )
