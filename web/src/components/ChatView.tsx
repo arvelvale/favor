@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
-  ArrowUp, ChartNoAxesColumn, ChefHat, CircleAlert, CircleCheck, Image as ImageIcon, ImageOff, Loader2, Moon, Sparkles,
+  ArrowUp, BookOpen, ChartNoAxesColumn, ChefHat, CircleAlert, CircleCheck, ExternalLink, Image as ImageIcon, ImageOff, Loader2, Moon, Sparkles,
   Sprout, Square, UserRound,
   UtensilsCrossed, type LucideIcon,
 } from 'lucide-react'
@@ -12,6 +12,34 @@ import { emitDataChanged } from '../lib/motion'
 import { useAuth } from '../App'
 import { MetricIcon } from './ui'
 import { LogoMark } from './Logo'
+
+/** 正文预处理：数值范围里的半角 ~ 换成全角 ～（避免 remark-gfm 误判成删除线）；[1] 变成可点击角标。 */
+function prepareMarkdown(text: string): string {
+  return text
+    .replace(/(\d)\s*~\s*(?=\d)/g, '$1～')      // 1600~2400 -> 1600～2400
+    .replace(/\[(\d{1,2})\](?!\()/g, '[$1](#cite-$1)')  // [1] -> [1](#cite-1)
+}
+
+/** markdown 渲染器：citation 角标点击后滚动到对应出处；其余链接新标签页打开。 */
+const mdComponents: Components = {
+  a({ href, children, node, ...rest }) {
+    void node  // react-markdown 注入的 AST 节点，不要展开到原生 <a> 上
+    const hit = href && /^#cite-(\d+)$/.exec(href)
+    if (hit) {
+      return (
+        <a className="citation-chip" href={href} title="查看出处" onClick={e => {
+          e.preventDefault()
+          const el = document.getElementById(`cite-${hit[1]}`)
+          if (!el) return
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          el.classList.add('cite-flash')
+          window.setTimeout(() => el.classList.remove('cite-flash'), 1400)
+        }}>{children}</a>
+      )
+    }
+    return <a href={href} target="_blank" rel="noreferrer" {...rest}>{children}</a>
+  },
+}
 
 const STARTERS: { icon: LucideIcon; color: string; title: string; text: string }[] = [
   { icon: UtensilsCrossed, color: 'var(--meal)', title: '记一顿饭', text: '午饭吃了一碗牛肉面，加了个卤蛋，还喝了杯奶茶' },
@@ -110,6 +138,7 @@ export default function ChatView({ conversationId, onCreated, onMissing, onTurnD
           patchLast(m => ({ ...m, cards: [...m.cards, ev.card] }))
           emitDataChanged()  // 工作台上的面板立即刷新
         }
+        else if (ev.type === 'citation_audit') patchLast(m => ({ ...m, citation_audit: ev.audit }))
         else if (ev.type === 'error') patchLast(m => ({ ...m, error: ev.message }))
       }, ctrl.signal)
     } catch (e) {
@@ -193,7 +222,16 @@ function AssistantMessage({ m }: { m: LiveMessage }) {
         {m.cards.length > 0 && <div className="tool-cards">{m.cards.map((c, i) => <ToolCard key={i} card={c} />)}</div>}
         {m.tool && <span className="tool-running"><Loader2 size={14} className="spin" />{m.tool}…</span>}
         {waiting && <span className="typing"><i /><i /><i /></span>}
-        {m.content && <div className="md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown></div>}
+        {m.content && <div className="md"><ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{prepareMarkdown(m.content)}</ReactMarkdown></div>}
+        {m.citation_audit && (() => {
+          const level = m.citation_audit.level || (m.citation_audit.ok ? 'ok' : 'error')
+          return (
+            <div className={`citation-audit ${level}`}>
+              {level === 'ok' ? <CircleCheck size={13} /> : <CircleAlert size={13} />}
+              <span>{m.citation_audit.notice}</span>
+            </div>
+          )
+        })()}
         {m.error && <div className="notice warn"><CircleAlert size={15} style={{ flexShrink: 0, marginTop: 3 }} />{m.error}</div>}
       </div>
     </div>
@@ -239,8 +277,46 @@ function ImageCard({ id, title }: { id: number; title: string }) {
   )
 }
 
+/** 营养资料引用出处：编号 + 证据等级徽章 + 标题/机构/日期 + 摘要 + 原文链接。 */
+function SourcesCard({ card }: { card: Extract<Card, { type: 'sources' }> }) {
+  if (card.no_evidence || card.sources.length === 0) {
+    return (
+      <div className="sources-card empty">
+        <div className="sources-head"><BookOpen size={14} />参考资料 · 暂无可靠依据</div>
+        <p className="sources-empty">知识库里没有找到能支撑这个问题的权威资料，回答中的数值按常见份量估算，仅供参考。</p>
+      </div>
+    )
+  }
+  return (
+    <div className="sources-card">
+      <div className="sources-head"><BookOpen size={14} />参考资料 <span className="sources-count">{card.sources.length} 条依据</span></div>
+      {card.risk_notice && (
+        <div className="sources-risk"><CircleAlert size={14} />{card.risk_notice}</div>
+      )}
+      <ol className="sources-list">
+        {card.sources.map(s => (
+          <li className="source-item" id={`cite-${s.citation}`} key={s.citation}>
+            <span className="source-num">{s.citation}</span>
+            <div className="source-body">
+              <a className="source-title" href={s.url} target="_blank" rel="noreferrer">{s.title}<ExternalLink size={12} /></a>
+              <div className="source-sub">
+                <span className={`ev-badge ev-${s.evidence_class}`}>{s.evidence_label}</span>
+                <span className="source-pub">{s.publisher}{s.published ? ` · ${s.published}` : ''}</span>
+              </div>
+              <p className="source-snippet">{s.snippet}</p>
+              {s.audience && <p className="source-audience">适用：{s.audience}</p>}
+            </div>
+          </li>
+        ))}
+      </ol>
+      <p className="sources-disclaimer">{card.disclaimer}</p>
+    </div>
+  )
+}
+
 function ToolCard({ card }: { card: Card }) {
   if (card.type === 'image') return <ImageCard id={card.image_id} title={card.title} />
+  if (card.type === 'sources') return <SourcesCard card={card} />
   if (card.type === 'record') {
     return (
       <div className={`tool-card ${card.action}`}>

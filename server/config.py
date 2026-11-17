@@ -41,7 +41,14 @@ class Settings:
         self.image_size = os.getenv("IMAGE_SIZE", "1024*1024").strip()
         self.image_daily_limit = int(os.getenv("IMAGE_DAILY_LIMIT", "10"))
 
-        self.database_path =Path(os.getenv("DATABASE_PATH", str(BASE_DIR / "data" / "favor.sqlite3")))
+        # 知识库 RAG：开关与检索阈值。留空时用 or 兜底默认值（getenv 第二参数对空串无效）。
+        self.rag_enabled = (os.getenv("RAG_ENABLED") or "true").strip().lower() in ("1", "true", "yes", "on")
+        self.rag_top_k = max(1, int(os.getenv("RAG_TOP_K") or "4"))
+        self.rag_min_abs_score = max(0.0, float(os.getenv("RAG_MIN_ABS_SCORE") or "10.0"))
+        self.rag_kb_dir = os.getenv("RAG_KB_DIR") or str(BASE_DIR / "rag" / "kb")
+
+        # 留空时用 or 兜底默认值（getenv 第二参数对空串无效，与 RAG 配置同理）。
+        self.database_path = Path(os.getenv("DATABASE_PATH") or str(BASE_DIR / "data" / "favor.sqlite3"))
         self.debug = os.getenv("DEBUG", "false").lower() in ("1", "true", "t", "yes")
         self.port = int(os.getenv("PORT", "5000"))
         # 生产环境走 HTTPS 时设为 true，会话 Cookie 只经加密连接发送。

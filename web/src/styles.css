@@ -624,3 +624,74 @@ a.image-frame:hover img.in { transform: scale(1.03); }
 .image-cap svg { color: var(--brand); flex-shrink: 0; }
 .image-cap em { margin-left: auto; font-style: normal; font-size: 11.5px; font-weight: 400; color: var(--ink-3); }
 @keyframes pulse-soft { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+
+/* ===== 营养资料引用出处卡片 ===== */
+.sources-card {
+  max-width: 560px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface);
+  box-shadow: var(--shadow); overflow: hidden; animation: pop .45s var(--ease) both;
+}
+.sources-head {
+  display: flex; align-items: center; gap: 7px; padding: 9px 13px; font-size: 12.5px; font-weight: 600;
+  color: var(--navy); background: var(--surface-2); border-bottom: 1px solid var(--line);
+}
+.sources-head svg { color: var(--brand); flex-shrink: 0; }
+.sources-count { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--ink-3); }
+.sources-empty { margin: 0; padding: 12px 13px; font-size: 12.5px; color: var(--ink-2); line-height: 1.65; }
+.sources-risk {
+  display: flex; align-items: flex-start; gap: 7px; margin: 10px 12px 0; padding: 8px 10px;
+  border-radius: 9px; background: #fff7e0; color: #8a5a00; font-size: 12px; line-height: 1.55;
+}
+.sources-risk svg { flex-shrink: 0; margin-top: 1px; }
+.sources-list { list-style: none; margin: 0; padding: 4px 12px 6px; }
+.source-item {
+  display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 12px;
+  border-radius: 8px; transition: background .3s;
+}
+.source-item:last-child { border-bottom: none; }
+.source-item.cite-flash { background: var(--brand-soft); }
+.source-num {
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
+  background: var(--navy); color: #fff; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.source-body { flex: 1; min-width: 0; }
+.source-title {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 12.8px; font-weight: 600; color: var(--navy);
+  line-height: 1.45; transition: color .2s;
+}
+.source-title:hover { color: var(--brand-700); }
+.source-title svg { flex-shrink: 0; color: var(--ink-3); }
+.source-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+.source-pub { font-size: 11px; color: var(--ink-3); }
+.source-snippet {
+  margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: var(--ink-2);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.source-audience { margin: 5px 0 0; font-size: 11px; color: var(--ink-3); }
+.ev-badge {
+  display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600;
+  line-height: 1.6; white-space: nowrap; border: 1px solid transparent;
+}
+.ev-badge.ev-guide { color: #14764a; background: #e8f6ee; border-color: #cbe9d8; }   /* 国家级学会指南 · 绿 */
+.ev-badge.ev-gov { color: #1f5fa8; background: #e9f2fc; border-color: #cddff4; }      /* 政府公开文件 · 蓝 */
+.ev-badge.ev-paper { color: #5b3bb5; background: #f0ebfb; border-color: #ded2f5; }    /* 同行评议文献 · 紫 */
+.ev-badge.ev-popular, .ev-badge.ev-unknown { color: #5c6675; background: #eef1f6; border-color: #e2e6ee; } /* 科普整理/未标注 · 灰 */
+.sources-disclaimer {
+  margin: 0; padding: 9px 13px; font-size: 11px; line-height: 1.55; color: var(--ink-3);
+  background: var(--surface-2); border-top: 1px solid var(--line);
+}
+/* 正文 [n] 角标：点击跳到对应出处 */
+.citation-chip {
+  display: inline-block; min-width: 16px; padding: 0 4px; margin: 0 1px; border-radius: 5px;
+  background: var(--brand-soft); color: var(--brand-700); font-size: 10.5px; font-weight: 600;
+  line-height: 1.6; text-align: center; vertical-align: super; cursor: pointer; transition: background .2s;
+}
+.citation-chip:hover { background: var(--brand-tint); }
+/* 引用事后自检：答案末尾的「编号核对」小提示 */
+.citation-audit {
+  display: flex; align-items: flex-start; gap: 6px; margin-top: 9px; padding: 7px 10px;
+  border-radius: 8px; font-size: 11px; line-height: 1.55;
+}
+.citation-audit svg { flex-shrink: 0; margin-top: 1px; }
+.citation-audit.ok { color: #1f7a4d; background: #eaf6ef; border: 1px solid #cfe9da; }
+.citation-audit.warn { color: #96631a; background: #fdf7e8; border: 1px solid #efe2bc; }
+.citation-audit.error { color: #a32d2d; background: #fceaea; border: 1px solid #f0cfcf; }

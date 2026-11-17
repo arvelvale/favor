@@ -221,6 +221,43 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(events[-1]["type"], "error")
         self.assertNotIn("secret", events[-1]["message"])
 
+    def test_citation_audit_emitted_and_replayed(self):
+        """引用自检：查过资料后，最终回答结束会发 citation_audit 事件，且历史回放能取回。"""
+        self.register()
+        conv = self.client.post("/api/conversations", json={}).get_json()["conversation"]
+        query = json.dumps({"query": "每天应该吃多少蔬菜"}, ensure_ascii=False)
+        self.fake.scripts = [
+            [*tool_chunk(0, "c1", "search_nutrition", query)],
+            [chunk("每天至少 300g 蔬菜 [1][2]。")],
+        ]
+        events = self.chat(conv["id"], "蔬菜吃多少")
+        types = [e["type"] for e in events]
+        self.assertIn("citation_audit", types)
+        self.assertLess(types.index("citation_audit"), types.index("done"))
+        audit = next(e["audit"] for e in events if e["type"] == "citation_audit")
+        self.assertIn(1, audit["valid"])
+        self.assertEqual(audit["invalid"], [])   # [1][2] 都是合法编号
+
+        # 历史回放：assistant 气泡带回自检结果
+        msgs = self.client.get(f"/api/conversations/{conv['id']}/messages").get_json()["messages"]
+        assistant = next(m for m in msgs if m["role"] == "assistant")
+        self.assertIsNotNone(assistant["citation_audit"])
+        self.assertEqual(assistant["citation_audit"]["invalid"], [])
+
+    def test_citation_audit_catches_fabricated_number_in_chat(self):
+        """即使模型编造了不存在的编号，自检也会如实标记 invalid。"""
+        self.register()
+        conv = self.client.post("/api/conversations", json={}).get_json()["conversation"]
+        query = json.dumps({"query": "每天应该吃多少蔬菜"}, ensure_ascii=False)
+        self.fake.scripts = [
+            [*tool_chunk(0, "c1", "search_nutrition", query)],
+            [chunk("按资料应该这样 [9]。")],   # [9] 不存在
+        ]
+        events = self.chat(conv["id"], "蔬菜")
+        audit = next(e["audit"] for e in events if e["type"] == "citation_audit")
+        self.assertEqual(audit["invalid"], [9])
+        self.assertFalse(audit["ok"])
+
 
 if __name__ == "__main__":
     unittest.main()

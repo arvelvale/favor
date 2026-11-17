@@ -8,6 +8,8 @@ from datetime import date, datetime, timedelta
 
 import health
 from health import ValidationError
+from rag import prompts as rag_prompts
+from rag import retriever as rag_retriever
 
 
 @dataclass
@@ -42,10 +44,17 @@ def tool(name: str, description: str, properties: dict, required: list[str] | No
 
 
 IMAGE_TOOLS = {"generate_food_image"}
+RAG_TOOLS = {"search_nutrition"}
 
 
-def schemas(image_enabled: bool = False) -> list[dict]:
-    return [t["schema"] for name, t in TOOLS.items() if image_enabled or name not in IMAGE_TOOLS]
+def schemas(image_enabled: bool = False, rag_enabled: bool = True) -> list[dict]:
+    def visible(name):
+        if name in IMAGE_TOOLS and not image_enabled:
+            return False
+        if name in RAG_TOOLS and not rag_enabled:
+            return False
+        return True
+    return [t["schema"] for name, t in TOOLS.items() if visible(name)]
 
 
 def _record_card(record: dict, action: str = "logged") -> dict:
@@ -249,6 +258,32 @@ def generate_food_image(ctx, args):
     return ({"ok": True, "image_id": image["id"], "status": "generating",
              "note": "图片正在后台生成，会直接显示在卡片里；回复里不要写链接，也不要描述图片已生成完毕"},
             [{"type": "image", "image_id": image["id"], "title": image["title"]}])
+
+
+@tool("search_nutrition",
+      "查询权威营养与膳食资料（中国居民膳食指南、国家卫健委等）。当用户问到具体营养数值、"
+      "推荐摄入量、某种食物的健康作用、膳食指南建议或特殊人群饮食时调用。"
+      "返回带 [编号] 的资料片段；回答中的营养数值与结论必须引用这些编号，查不到就说明暂无可靠依据。",
+      {"query": {"type": "string", "description": "要查询的营养问题，如 每天吃多少蔬菜、菠菜补铁吗、孕妇能喝牛奶吗"}},
+      ["query"])
+def search_nutrition(ctx, args):
+    query = str(args.get("query") or "").strip()
+    if not query:
+        return {"ok": False, "error": "查询内容为空"}, []
+    hits = rag_retriever.search(query)
+    # 给模型：带 [n] 编号的资料 + 引用规则（无命中时是拒答约束）
+    context = rag_prompts.build_rag_context(hits, query=query)
+    # 给前端：引用卡片数据（阶段 2 渲染），同时把编号清单回传给模型便于核对
+    payload = rag_prompts.sources_payload(hits, query=query)
+    result = {
+        "ok": True,
+        "query": query,
+        "hit_count": len(hits),
+        "citation_numbers": [s["citation"] for s in payload["sources"]],
+        "reference_material": context,
+    }
+    cards = [{"type": "sources", **payload}]
+    return result, cards
 
 
 def execute(ctx: ToolContext, name: str, raw_args: str):
