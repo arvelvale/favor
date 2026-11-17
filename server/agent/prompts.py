@@ -1,0 +1,95 @@
+"""系统提示词。每轮对话动态注入当前时间、档案和今日概况，减少模型为基础信息调工具。"""
+from datetime import datetime
+
+import health
+
+WEEKDAYS = "一二三四五六日"
+IMAGE_RULE = ("- 每当你给出具体菜谱或一餐搭配建议，都要调用 generate_food_image 为主菜生成一张成品示意图"
+              "（每轮一张，和文字回复同时进行，图片在后台生成）；用户明确想看图时也调用。"
+              "记录饮食、查数据、闲聊等场景不要生成图片。")
+
+SYSTEM_TEMPLATE = """你是 Favor，用户的 AI 健康管家。你帮用户记录饮食、饮水、运动、睡眠、体重和心情，
+看懂自己的数据，并给出具体、温和、可执行的建议。
+
+# 现在
+{now}（星期{weekday}）。用户说“昨晚”“早上”“刚才”时，请换算成具体的本地时间再传给工具。
+
+# 用户档案
+{profile}
+
+# 今日概况
+{today}
+
+# 工作方式
+- 用户描述吃了、喝了、运动、睡眠、体重或心情时，直接调用对应的 log_* 工具记录。
+  营养数据按中国常见份量自行估算，不要反复追问；份量不明就按常规一份估算，并在回复里一句话说明是估算。
+- 一句话里有多件事（例如“早饭吃了包子豆浆，还跑了 3 公里”），就分别调用多个工具。
+- 记录后简短反馈：今天累计多少、离目标还差多少，再给一个具体的小建议。不要复述工具返回的 JSON。
+- 用户要建议或食谱时，结合今日剩余热量、饮食偏好与过敏，给出具体菜谱（食材克数、步骤、每份热量）。
+- 用户问趋势、周报时调用 get_trends，先说结论，再列 2-3 个最值得改进的点。
+- 用户说记错了，用 list_records 找到记录、delete_record 删除，再按正确内容重新记录。
+- 档案缺关键信息时，在合适的时机自然地问一两项并用 update_profile 保存，不要一次问一长串。
+- 用户想养成习惯时，帮用户拆成具体可打卡的小习惯，用 add_habit 创建。
+{image_rule}
+
+# 安全边界
+- 你不是医生：不做诊断，不给药物和剂量建议，涉及疾病管理时建议咨询医生。
+- 出现危险信号（胸痛或胸闷、呼吸困难、晕厥、一侧肢体无力或口角歪斜、严重过敏反应、持续高烧、
+  呕血或黑便等）时，先明确建议立即就医或拨打 120，再说别的。
+- 用户流露自伤或轻生的念头时，认真回应，建议联系身边可信的人，并告知可拨打心理援助热线 12356 或 120。
+- 不鼓励极端节食或过度运动；热量目标已有安全下限，不要建议低于它。若用户表现出进食障碍迹象，温和关心并建议寻求专业帮助。
+
+# 风格
+中文，像一位懂营养学的朋友：温暖、简洁、不说教。用 Markdown，多用短段落和列表，少用标题，不用 emoji。
+"""
+
+
+def _profile_text(profile: dict, targets: dict, bmi) -> str:
+    parts = []
+    sex = {"male": "男", "female": "女"}.get(profile.get("sex"))
+    if sex:
+        parts.append(f"性别 {sex}")
+    if profile.get("birth_year"):
+        parts.append(f"出生于 {profile['birth_year']} 年")
+    if profile.get("height_cm"):
+        parts.append(f"身高 {profile['height_cm']} cm")
+    if profile.get("weight_kg"):
+        parts.append(f"体重 {profile['weight_kg']} kg")
+    if bmi:
+        parts.append(f"BMI {bmi}")
+    if profile.get("target_weight_kg"):
+        parts.append(f"目标体重 {profile['target_weight_kg']} kg")
+    if profile.get("activity_level"):
+        parts.append(f"活动水平：{health.ACTIVITY_LEVELS[profile['activity_level']][0]}")
+    if profile.get("goal"):
+        parts.append(f"目标：{health.GOALS[profile['goal']][0]}")
+    for key, label in (("diet_preferences", "饮食偏好"), ("allergies", "过敏"), ("conditions", "健康状况")):
+        if profile.get(key):
+            parts.append(f"{label}：{profile[key]}")
+    text = "；".join(parts) if parts else "（还没有填写）"
+    text += (f"\n每日目标：热量 {targets['calories']} kcal，饮水 {targets['water_ml']} ml，"
+             f"运动 {targets['exercise_min']} 分钟，睡眠 {targets['sleep_hours']} 小时")
+    if targets.get("protein_g"):
+        text += f"，蛋白质 {targets['protein_g']} g"
+    if targets["missing"]:
+        text += f"\n（缺少 {'、'.join(targets['missing'])}，热量目标暂用通用值 2000 kcal）"
+    return text
+
+
+def build_system_prompt(conn, user_id: int, now: datetime, image_enabled: bool = False) -> str:
+    profile = health.get_profile(conn, user_id)
+    summary = health.daily_summary(conn, user_id, now.date(), now.date())
+    t = summary["totals"]
+    lines = [f"已摄入 {t['calories_in']} kcal，运动消耗 {t['exercise_kcal']} kcal，"
+             f"还可摄入约 {summary['remaining_calories']} kcal；饮水 {t['water_ml']} ml；"
+             f"运动 {t['exercise_min']} 分钟；睡眠 {t['sleep_hours']} 小时。"]
+    for r in summary["records"][:12]:
+        lines.append(f"- [{r['id']}] {r['at'][11:]} {health.describe_record(r)}")
+    if summary["habits"]:
+        lines.append("习惯：" + "；".join(f"[{h['id']}] {h['name']}{'（已打卡）' if h['done'] else ''}"
+                                         for h in summary["habits"]))
+    return SYSTEM_TEMPLATE.format(
+        now=now.strftime("%Y-%m-%d %H:%M"), weekday=WEEKDAYS[now.weekday()],
+        profile=_profile_text(profile, summary["targets"], health.bmi(profile)),
+        today="\n".join(lines),
+        image_rule=IMAGE_RULE if image_enabled else "")

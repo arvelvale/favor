@@ -27,3 +27,14 @@ htmlcov/
 **/static/uploads/
 .DS_Store
 Thumbs.db
+
+# Frontend
+node_modules/
+web/dist/
+*.tsbuildinfo
+
+# Local data
+server/data/
+
+# 本机开发工具配置（含本地路径）
+.claude/
