@@ -89,6 +89,30 @@ class RetrievalTests(unittest.TestCase):
         self.assertIn("番茄", expanded)
         self.assertIn("鸡蛋", expanded)
 
+    def test_rerank_drops_stopword_residual_singles(self):
+        """阶段②清洗：停用词残片单字（多少→少、需要→需）不进重排词集。"""
+        from rag.retriever import _rerank_query_terms
+        terms = tokenize("儿童每天需要多少钙")
+        cleaned = _rerank_query_terms(terms)
+        # 「少」「需」是停用词残片，应被清掉；「钙」「儿童」是主题词，必须保留
+        self.assertNotIn("少", cleaned, "停用词「多少」残字应清除")
+        self.assertNotIn("需", cleaned, "停用词「需要」残字应清除")
+        self.assertIn("钙", cleaned, "主题词单字应保留")
+        self.assertIn("儿童", cleaned, "主题双字词应保留")
+
+    def test_p2_top1_regression(self):
+        """P2 首位修复回归：Q03/Q09 曾漂移、Q13 易被误伤，首位须为期望资料。"""
+        cases = {
+            "每天烹调油摄入量建议": "cdg2022-05-salt-oil-sugar",
+            "儿童每天需要多少钙": "cnsoc2025-02-calcium-vitamin-d",
+            "深色蔬菜要占一半吗": "cdg2022-10-vegetables-fruits-detail",
+        }
+        for query, expected in cases.items():
+            hits = rag_retriever.search(query)
+            self.assertTrue(hits, f"{query} 不应拒答")
+            self.assertEqual(hits[0]["doc_id"], expected,
+                             f"{query} 首位应为 {expected}，实际 {hits[0]['doc_id']}")
+
     def test_tokenizer_ignores_installed_jieba(self):
         """门槛 10.0 按内置分词标定；即使环境里装了 jieba，分词结果也不能变。"""
         import importlib

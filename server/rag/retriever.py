@@ -9,12 +9,13 @@
 启动时重建索引只需毫秒级，因此不落盘索引文件，避免索引与语料不同步。
 """
 import logging
+import math
 
 from . import settings
 from .bm25 import BM25Index
 from .corpus import load_chunks
 from .glossary import expand_query
-from .tokenizer import tokenize
+from .tokenizer import STOPWORD_RESIDUAL_SINGLES, tokenize
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,33 @@ def field_tokens():
 
 def is_enabled():
     return bool(settings.RAG_ENABLED)
+
+
+def _rerank_query_terms(query_tokens):
+    """阶段②专用的查询词集：去掉停用词残片单字，且单字词不再单独重复计。
+
+    tokenizer 把中文切成「单字 + 相邻双字」，停用词（多少/需要/什么…）虽被
+    整词过滤，但其组成单字（少/需/么…）会作为单字残留下来。这些残字会在
+    「青少年」的「少」这类场景里制造假命中，把无关文档顶到重排前列。
+
+    注意：只用于阶段②的字段交集计数。阶段①的 BM25 打分为保持拒答门槛
+    （RAG_MIN_ABS_SCORE 按含残字的原分词标定）继续用完整 query_tokens，绝不动。
+    """
+    return {t for t in query_tokens
+            if not (len(t) == 1 and t in STOPWORD_RESIDUAL_SINGLES)}
+
+
+def _field_boost(query_set, fields_i):
+    """阶段②字段命中加分：标题命中数开平方，抑制长标题堆词虚高。
+
+    中文双字切分会让「每天/摄入/推荐」这类通用词在长标题上堆出很高命中数，
+    把真正相关的短标题压下去（实测 Q03 烹调油被奶类文档顶掉）。开平方后
+    「命中 9 个词」只当 3 个算，保留「命中标题词多更相关」的信号，又避免堆词霸榜。
+    """
+    title_hits = len(query_set & fields_i[0])
+    return (math.sqrt(title_hits) * settings.RAG_TITLE_BOOST
+            + len(query_set & fields_i[1]) * settings.RAG_HEADING_BOOST
+            + len(query_set & fields_i[2]) * settings.RAG_TAG_BOOST)
 
 
 def _chunk_item(chunk, score, citation):
@@ -132,16 +160,10 @@ def search(query, top_k=None):
 
     # 阶段②：用查询词与「标题/小标题/标签」的交集给候选加分并重排。
     # 只在候选内部改变顺序，不新增也不删除任何片段。
-    query_set = set(query_tokens)
+    query_set = _rerank_query_terms(query_tokens)
     fields = field_tokens()
     candidates.sort(
-        key=lambda i: (
-            scores[i]
-            + len(query_set & fields[i][0]) * settings.RAG_TITLE_BOOST
-            + len(query_set & fields[i][1]) * settings.RAG_HEADING_BOOST
-            + len(query_set & fields[i][2]) * settings.RAG_TAG_BOOST,
-            scores[i],
-        ),
+        key=lambda i: (scores[i] + _field_boost(query_set, fields[i]), scores[i]),
         reverse=True,
     )
 
@@ -174,16 +196,10 @@ def _rank_for_fusion(query, chunks, limit):
         if len(candidates) >= limit * settings.RAG_RERANK_POOL_MULT:
             break
 
-    query_set = set(query_tokens)
+    query_set = _rerank_query_terms(query_tokens)
     fields = field_tokens()
     candidates.sort(
-        key=lambda pair: (
-            pair[1]
-            + len(query_set & fields[pair[0]][0]) * settings.RAG_TITLE_BOOST
-            + len(query_set & fields[pair[0]][1]) * settings.RAG_HEADING_BOOST
-            + len(query_set & fields[pair[0]][2]) * settings.RAG_TAG_BOOST,
-            pair[1],
-        ),
+        key=lambda pair: (pair[1] + _field_boost(query_set, fields[pair[0]]), pair[1]),
         reverse=True,
     )
     return candidates

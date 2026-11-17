@@ -24,6 +24,18 @@ _STOPWORDS = frozenset({
     "is", "are", "for", "and", "with", "how", "what", "please",
 })
 
+# 停用词残字单字：本身不是停用词、但出现在某个多字停用词里的中文单字，
+# 例如「多少」里的「少/多」、「需要」里的「需」。这类字是分词后残留的噪声，
+# 会在「青少年」的「少」这类偶然场景里制造假命中。仅用于检索阶段②字段重排，
+# 不参与 BM25 打分（阶段①门槛是按含这些字的原分词标定的，动不得）。
+STOPWORD_RESIDUAL_SINGLES = frozenset(
+    ch
+    for word in _STOPWORDS
+    if len(word) >= 2
+    for ch in word
+    if len(ch) == 1 and ch not in _STOPWORDS and _CJK_RUN.fullmatch(ch)
+)
+
 
 def _fallback_tokens(text):
     tokens = []
