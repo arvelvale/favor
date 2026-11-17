@@ -146,9 +146,10 @@
       "query": "适量吃鱼禽蛋瘦肉每天多少",
       "expected_docs": [
         "cdg2022-04-fish-poultry-eggs",
-        "cdg2022-09-pagoda-layers"
+        "cdg2022-09-pagoda-layers",
+        "cdg2016-04-fish-poultry-eggs-meat"
       ],
-      "note": "准则四"
+      "note": "准则四；2016版专家解读同为权威来源"
     },
     {
       "id": "Q17",
@@ -280,9 +281,10 @@
       "id": "Q32",
       "query": "老年人每天应该喝多少水",
       "expected_docs": [
-        "cdg2022-14-older-pagoda"
+        "cdg2022-14-older-pagoda",
+        "cdg2016-older-adults-detail"
       ],
-      "note": "1500~1700ml"
+      "note": "1500~1700ml；2016版专家解读同为权威来源"
     },
     {
       "id": "N01",
