@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
-  ArrowUp, BookOpen, ChartNoAxesColumn, ChefHat, CircleAlert, CircleCheck, ExternalLink, Image as ImageIcon, ImageOff, Loader2, Moon, Sparkles,
-  Sprout, Square, UserRound,
+  ArrowUp, BookOpen, ChartNoAxesColumn, ChefHat, ChevronRight, CircleAlert, CircleCheck, ExternalLink, Image as ImageIcon, ImageOff, Loader2, Sparkles,
+  Refrigerator, ShoppingBasket, Sprout, Square, UserRound,
   UtensilsCrossed, type LucideIcon,
 } from 'lucide-react'
 import { api, ApiError, streamChat, type Card, type ChatMessage, type Conversation, type ImageMeta } from '../lib/api'
@@ -45,10 +45,10 @@ const mdComponents: Components = {
 }
 
 const STARTERS: { icon: LucideIcon; color: string; title: string; text: string }[] = [
-  { icon: UtensilsCrossed, color: 'var(--meal)', title: '记一顿饭', text: '午饭吃了一碗牛肉面，加了个卤蛋，还喝了杯奶茶' },
-  { icon: ChefHat, color: 'var(--exercise)', title: '晚餐吃什么', text: '冰箱里有鸡胸肉、西兰花和鸡蛋，帮我配一份晚餐，控制在剩余热量内' },
-  { icon: ChartNoAxesColumn, color: 'var(--water)', title: '看看这周', text: '帮我总结一下最近 7 天的饮食、睡眠和运动情况' },
-  { icon: Moon, color: 'var(--sleep)', title: '想睡得更好', text: '我最近总是一点多才睡，帮我定几个能坚持的小习惯' },
+  { icon: ChefHat, color: 'var(--meal)', title: '今天吃什么', text: '看看冰箱里的东西，今晚能做点什么？想吃清淡一点的' },
+  { icon: Refrigerator, color: 'var(--water)', title: '刚买了菜', text: '刚从超市回来，买了一斤排骨、两个西兰花、一盒鸡蛋，排骨放冷冻' },
+  { icon: Sprout, color: 'var(--exercise)', title: '快过期了', text: '冰箱里有什么快过期的？帮我想想怎么用掉' },
+  { icon: UtensilsCrossed, color: 'var(--sleep)', title: '记一顿饭', text: '午饭在外面吃了一碗牛肉面，加了个卤蛋' },
 ]
 
 interface LiveMessage extends ChatMessage { pending?: boolean; tool?: string | null; gap?: boolean; error?: string }
@@ -176,8 +176,8 @@ export default function ChatView({ conversationId, onCreated, onMissing, onTurnD
           {loadError && <div className="notice warn"><CircleAlert size={16} style={{ flexShrink: 0, marginTop: 2 }} />{loadError}</div>}
           {messages.length === 0 && (
             <div className="welcome">
-              <h2>今天过得怎么样？</h2>
-              <p>像和朋友聊天一样告诉我，我来记录和分析。</p>
+              <h2>今天想吃点什么？</h2>
+              <p>告诉我冰箱里有什么、想吃什么，我帮你想菜、管冰箱，顺手记下吃了什么。</p>
               <div className="starter-grid">
                 {STARTERS.map(s => (
                   <button key={s.title} className="starter" onClick={() => send(s.text)} disabled={!llmEnabled || busy}>
@@ -197,7 +197,7 @@ export default function ChatView({ conversationId, onCreated, onMissing, onTurnD
       <div className="composer-wrap">
         <div className="composer">
           <textarea ref={taRef} rows={1} value={input} disabled={!llmEnabled}
-            placeholder={compact ? '和 Favor 说说今天…' : '例如：早饭吃了两个肉包和一杯豆浆'}
+            placeholder={compact ? '问问今天吃什么…' : '例如：冰箱里有鸡蛋和番茄，今晚做什么'}
             onChange={e => {
               setInput(e.target.value)
               e.target.style.height = 'auto'
@@ -319,6 +319,31 @@ function SourcesCard({ card }: { card: Extract<Card, { type: 'sources' }> }) {
 
 function ToolCard({ card }: { card: Card }) {
   if (card.type === 'image') return <ImageCard id={card.image_id} title={card.title} />
+  if (card.type === 'pantry') {
+    return (
+      <Link to="/app/fridge" className="tool-card">
+        <span className="metric-icon sm" style={{ '--c': 'var(--water)' } as CSSProperties}><Refrigerator size={14} /></span>
+        <div className="t"><b>{card.names.join('、')}</b><span>{card.action === 'added' ? '已放进冰箱' : '已从冰箱移出'}</span></div>
+        <CircleCheck size={16} className="ok" />
+      </Link>
+    )
+  }
+  if (card.type === 'recipes') {
+    return (
+      <div className="chat-recipes">
+        {card.recipes.map(r => (
+          <Link key={r.id} to={`/app/recipe/${r.id}`} className="tool-card chat-recipe">
+            <span className="metric-icon sm" style={{ '--c': r.missing.length ? 'var(--weight)' : 'var(--exercise)' } as CSSProperties}>
+              {r.missing.length ? <ShoppingBasket size={14} /> : <ChefHat size={14} />}
+            </span>
+            <div className="t"><b>{r.title}</b>
+              <span>{r.minutes} 分钟 · {r.missing.length ? `缺 ${r.missing.join('、')}` : '现在就能做'}{r.uses_expiring.length ? ` · 用掉${r.uses_expiring.join('、')}` : ''}</span></div>
+            <ChevronRight size={16} className="go" />
+          </Link>
+        ))}
+      </div>
+    )
+  }
   if (card.type === 'sources') return <SourcesCard card={card} />
   if (card.type === 'record') {
     return (
@@ -340,7 +365,7 @@ function ToolCard({ card }: { card: Card }) {
   if (card.type === 'habit') {
     const label = { created: '新习惯', checked: '已打卡', unchecked: '已取消打卡' }[card.action]
     return (
-      <Link to="/app" className="tool-card">
+      <Link to="/app/health" className="tool-card">
         <span className="metric-icon sm" style={{ '--c': 'var(--exercise)' } as CSSProperties}><Sprout size={14} /></span>
         <div className="t"><b>{card.title}</b><span>{label}</span></div>
       </Link>

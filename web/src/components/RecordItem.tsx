@@ -7,7 +7,8 @@ export default function RecordItem({ record, onDelete }: { record: HealthRecord;
   const d = record.data
   let detail = ''
   if (record.kind === 'meal') {
-    detail = `蛋白质 ${d.protein}g · 碳水 ${d.carbs}g · 脂肪 ${d.fat}g`
+    // 没有营养素数据时（如旧菜谱做完自动记的一餐）不显示「0g」，以免误以为真的是 0
+    detail = d.protein || d.carbs || d.fat ? `蛋白质 ${d.protein}g · 碳水 ${d.carbs}g · 脂肪 ${d.fat}g` : (d.note || '')
   } else if (record.kind === 'mood' && d.note) {
     detail = d.note
   } else if (d.note) {

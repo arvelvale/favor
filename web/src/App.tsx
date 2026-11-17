@@ -6,6 +6,10 @@ import { ToastProvider } from './components/ui'
 import LandingPage from './pages/Landing'
 import AuthPage from './pages/Auth'
 import OverviewPage from './pages/Overview'
+import KitchenPage from './pages/Kitchen'
+import FridgePage from './pages/Fridge'
+import RecipePage from './pages/Recipe'
+import SavedPage from './pages/Saved'
 import ChatPage from './pages/Chat'
 import TrendsPage from './pages/Trends'
 import RecordsPage from './pages/Records'
@@ -63,7 +67,11 @@ export default function App() {
             <Route path="/login" element={<AuthGate mode="login" />} />
             <Route path="/register" element={<AuthGate mode="register" />} />
             <Route path="/app" element={<Protected><Workbench /></Protected>}>
-              <Route index element={<OverviewPage />} />
+              <Route index element={<KitchenPage />} />
+              <Route path="fridge" element={<FridgePage />} />
+              <Route path="recipes" element={<SavedPage />} />
+              <Route path="recipe/:id" element={<RecipePage />} />
+              <Route path="health" element={<OverviewPage />} />
               <Route path="chat" element={<ChatPage />} />
               <Route path="chat/:id" element={<ChatPage />} />
               <Route path="trends" element={<TrendsPage />} />

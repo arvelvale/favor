@@ -70,8 +70,78 @@ export interface NutritionSource {
   audience?: string
 }
 
+// ---------------------------------------------------------- 冰箱与菜谱
+
+export type Storage = 'fridge' | 'freezer' | 'pantry'
+
+export interface PantryItem {
+  id: number
+  name: string
+  category: string
+  category_label: string
+  quantity: number | null
+  unit: string
+  storage: Storage
+  storage_label: string
+  expires_on: string | null
+  expires_estimated: boolean
+  days_left: number | null
+}
+
+/** 一句话录入的解析预览：还没入库，没有 id。 */
+export type ParsedItem = Omit<PantryItem, 'id'>
+
+export interface CatalogGroup { category: string; label: string; items: string[] }
+
+export interface Ingredient {
+  name: string
+  amount: string
+  optional: boolean
+  status?: 'have' | 'staple' | 'missing'
+  pantry_id?: number
+}
+
+export interface Recipe {
+  id: number
+  title: string
+  summary: string
+  minutes: number
+  difficulty: number
+  servings: number
+  kcal_per_serving: number | null
+  ingredients: Ingredient[]
+  steps: string[]
+  tips: string
+  missing: string[]
+  uses_expiring: string[]
+  uses_count: number
+  saved: boolean
+  cooked_count: number
+  created_at: string
+}
+
+export interface RecipeBatch { batch: string | null; recipes: Recipe[]; stale: boolean; dropped?: { title: string; reason: string }[] }
+
+export interface CookUsage {
+  item_id: number
+  name: string
+  amount: string
+  quantity: number | null
+  unit: string
+  remaining: number | null
+  used_up: boolean
+}
+
+export interface CookPreview { recipe: Recipe; usage: CookUsage[]; meal_type: string; eaten_servings: number }
+export interface CookResult { title: string; used: { name: string; result: string }[]; record: { id: number; text: string } | null }
+export interface CookLog { id: number; title: string; cooked_at: string; servings: number; recipe_id: number | null; used: { name: string; result: string }[] }
+
+export type RecipeBrief = Pick<Recipe, 'id' | 'title' | 'minutes' | 'difficulty' | 'kcal_per_serving' | 'missing' | 'uses_expiring' | 'summary'>
+
 export type Card =
   | { type: 'record'; action: 'logged' | 'deleted'; kind: Kind; record_id: number; title: string; at: string }
+  | { type: 'pantry'; action: 'added' | 'removed'; names: string[] }
+  | { type: 'recipes'; recipes: RecipeBrief[] }
   | { type: 'profile'; title: string; fields: string[]; calories: number; water_ml: number }
   | { type: 'habit'; action: 'created' | 'checked' | 'unchecked'; title: string }
   | { type: 'trend'; days: number }
@@ -141,6 +211,7 @@ export const api = {
   get: <T>(url: string) => request<T>('GET', url),
   post: <T>(url: string, body: unknown = {}) => request<T>('POST', url, body),
   put: <T>(url: string, body: unknown) => request<T>('PUT', url, body),
+  patch: <T>(url: string, body: unknown) => request<T>('PATCH', url, body),
   del: <T>(url: string) => request<T>('DELETE', url),
 }
 

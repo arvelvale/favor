@@ -27,6 +27,8 @@ TOOL_LABELS = {
     "get_day_summary": "查看当日数据", "get_trends": "分析趋势", "list_records": "查找记录",
     "get_profile": "读取档案", "update_profile": "更新档案", "add_habit": "创建习惯", "check_habit": "习惯打卡",
     "generate_food_image": "生成菜品图", "search_nutrition": "查询营养资料",
+    "list_pantry": "查看冰箱", "add_pantry_items": "放进冰箱", "remove_pantry_items": "更新冰箱",
+    "recommend_recipes": "翻冰箱想菜谱",
 }
 
 
@@ -87,9 +89,10 @@ def _stream_completion(client, model: str, messages: list[dict], tool_schemas: l
 
 
 def run_turn(conn, client, model: str, user_id: int, conversation_id: int, user_text: str, now: datetime,
-             images=None):
+             images=None, recipe_limit: int = 20):
     """执行一轮对话，产出事件 dict。conn 由调用方创建，本函数负责提交。"""
-    ctx = tools.ToolContext(conn=conn, user_id=user_id, now=now, images=images)
+    ctx = tools.ToolContext(conn=conn, user_id=user_id, now=now, images=images,
+                            llm=client, model=model, recipe_limit=recipe_limit)
     tool_schemas = tools.schemas(image_enabled=images is not None,
                                  rag_enabled=rag_retriever.is_enabled())
     history = load_history(conn, conversation_id)
