@@ -288,6 +288,20 @@ class EvalBaselineTests(unittest.TestCase):
         self.assertTrue(report.exists(),
                         "缺少评测基线成绩单，先跑 python -m rag.evaluate --md rag/eval/report.md")
 
+    def test_adversarial_questions_all_pass(self):
+        """对抗题（错别字/口语/多意图 + 超范围拒答）必须逐题通过，防止题库被改坏。"""
+        from rag.evaluate import evaluate
+        rows, _ = evaluate()
+        def is_adversarial(rid):
+            if not rid[1:].isdigit():
+                return False
+            num = int(rid[1:])
+            return (rid.startswith("Q") and num >= 43) or (rid.startswith("N") and num >= 4)
+        adversarial = [r for r in rows if is_adversarial(r["id"])]
+        self.assertGreaterEqual(len(adversarial), 12, "对抗题数量不足，题库可能被误删")
+        failed = [r["id"] + " " + r["query"] for r in adversarial if not r["correct"]]
+        self.assertEqual(failed, [], "对抗题出现未通过：" + "、".join(failed))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

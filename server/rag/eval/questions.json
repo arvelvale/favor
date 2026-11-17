@@ -389,6 +389,100 @@
         "cdc2015-food-compatibility-myth"
       ],
       "note": "食物相克辟谣 用户典型问法"
+    },
+    {
+      "id": "Q43",
+      "query": "每天吃多少疏菜",
+      "expected_docs": [
+        "cdg2022-03-vegetables-fruits",
+        "cdg2022-10-vegetables-fruits-detail"
+      ],
+      "note": "对抗题·错别字：疏菜=蔬菜，首位命中蔬果推荐"
+    },
+    {
+      "id": "Q44",
+      "query": "吃啥补铁",
+      "expected_docs": [
+        "nhc2024-08-iron-rich-foods-infants",
+        "cdg2016-04-fish-poultry-eggs-meat"
+      ],
+      "note": "对抗题·口语：吃啥=什么食物，命中补铁专题"
+    },
+    {
+      "id": "Q45",
+      "query": "贫血吃点啥好",
+      "expected_docs": [
+        "nhc2024-08-iron-rich-foods-infants",
+        "cdg2016-older-adults-detail"
+      ],
+      "note": "对抗题·口语：贫血饮食，命中含铁食物"
+    },
+    {
+      "id": "Q46",
+      "query": "想补锌吃啥",
+      "expected_docs": [
+        "cdg2016-04-fish-poultry-eggs-meat"
+      ],
+      "note": "对抗题·口语：命中鱼禽蛋瘦肉（铁锌来源）"
+    },
+    {
+      "id": "Q47",
+      "query": "蔬菜和水果每天各吃多少",
+      "expected_docs": [
+        "cdg2022-03-vegetables-fruits",
+        "cdg2022-10-vegetables-fruits-detail"
+      ],
+      "note": "对抗题·多意图：蔬果两类一起问，首位命中蔬果推荐"
+    },
+    {
+      "id": "Q48",
+      "query": "吃啥对心血管好",
+      "expected_docs": [
+        "cnsoc2014-cardio-nutrition"
+      ],
+      "note": "对抗题·口语：心血管饮食，命中心血管共识"
+    },
+    {
+      "id": "Q49",
+      "query": "每天盐别超过多少克",
+      "expected_docs": [
+        "cdg2022-05-salt-oil-sugar",
+        "cdg2022-05a-salt-oil-sugar-detail"
+      ],
+      "note": "对抗题·口语：限盐，命中三减指南"
+    },
+    {
+      "id": "Q50",
+      "query": "一天吃几种菜比较好",
+      "expected_docs": [
+        "cdg2022-01-food-variety",
+        "cdg2022-01a-food-variety-detail"
+      ],
+      "note": "对抗题·口语：食物多样，命中准则一"
+    },
+    {
+      "id": "N04",
+      "query": "感冒了吃哪种消炎药",
+      "expect_no_evidence": true,
+      "note": "对抗题·超范围：问用药，知识库不覆盖，应拒答"
+    },
+    {
+      "id": "N05",
+      "query": "今天基金亏了怎么办",
+      "expect_no_evidence": true,
+      "note": "对抗题·无关：理财问题，应拒答"
+    },
+    {
+      "id": "N06",
+      "query": "头孢和酒一起喝有事吗",
+      "expect_no_evidence": true,
+      "note": "对抗题·超范围：问药物相互作用，应拒答"
+    },
+    {
+      "id": "N07",
+      "query": "明天股票涨还是跌",
+      "expect_no_evidence": true,
+      "note": "对抗题·无关：行情预测，应拒答"
     }
   ]
 }
