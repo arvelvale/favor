@@ -1,4 +1,4 @@
-"""Favor 健康管家 · API 服务。
+"""Favor 厨房搭子 · API 服务。
 
 开发：python app.py（配合 web/ 下 npm run dev，Vite 代理 /api）
 生产：先在 web/ 下 npm run build，再启动本服务，静态页面由 Flask 直接提供。
@@ -13,6 +13,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import health
 import kitchen
 import onboarding
+import photo
 import prefs
 from agent import runner
 from config import Settings, logger
@@ -22,7 +23,8 @@ from health import ValidationError
 from images import DashScopeImageClient, ImageService, public_image
 
 
-def create_app(settings: Settings | None = None, llm_client=None, image_client=None, images_async: bool = True) -> Flask:
+def create_app(settings: Settings | None = None, llm_client=None, image_client=None, images_async: bool = True,
+               vision_client=None) -> Flask:
     settings = settings or Settings()
     app = Flask(__name__, static_folder=None)
     app.config.update(
@@ -50,6 +52,12 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
 
     def get_llm():
         return llm_client
+
+    # 拍照识别食材：百炼视觉模型（OpenAI 兼容接口）。没配密钥且没注入客户端时为 None
+    if vision_client is None and settings.vision_enabled:
+        from openai import OpenAI
+        vision_client = OpenAI(api_key=settings.image_api_key, base_url=settings.vision_base_url,
+                               timeout=settings.vision_timeout, max_retries=1)
 
     # 菜品配图（阿里云百炼）。没配密钥且没注入客户端时为 None，agent 不会看到生图工具。
     if image_client is None and settings.image_enabled:
@@ -79,6 +87,9 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
         if request.path.startswith("/api/") and request.method in ("POST", "PUT", "PATCH", "DELETE"):
             if request.method != "DELETE" and not request.is_json:
                 return error("请求需为 JSON", 415)
+        # 只有拍照识别需要传图片：单独放宽这一个接口的请求体上限（base64 约为原图 4/3），其余接口仍是 256KB
+        if request.path == "/api/pantry/photo":
+            request.max_content_length = photo.MAX_BYTES * 4 // 3 + 64 * 1024
 
     def local_now() -> datetime:
         """用户本地时间。前端在 X-TZ-Offset 头里传 Date#getTimezoneOffset()（分钟，UTC−本地）。"""
@@ -112,6 +123,7 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
     def meta():
         return jsonify({"llm_enabled": settings.llm_enabled, "model": settings.llm_model if settings.llm_enabled else None,
                         "image_enabled": image_service is not None,
+                        "vision_enabled": vision_client is not None,
                         "rag_enabled": settings.rag_enabled and rag_retriever.is_enabled()})
 
     @app.post("/api/auth/register")
@@ -431,6 +443,21 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
                                     "category_label": kitchen.CATEGORIES[clean["category"]],
                                     "storage_label": kitchen.STORAGES[clean["storage"]]})
         return jsonify({"items": preview})
+
+    @app.post("/api/pantry/photo")
+    @login_required
+    def photo_pantry():
+        """拍冰箱照片识别食材：只识别不入库，照片不落盘。前端让用户确认后再 POST /api/pantry。"""
+        conn = get_db()
+        try:
+            result = photo.recognize(conn, vision_client, settings.vision_model if vision_client else None,
+                                     g.user["id"], body().get("image"), local_now().date(), settings.vision_daily_limit)
+        except ValidationError:
+            raise
+        except Exception as exc:  # noqa: BLE001 —— 模型/网络/欠费等，给用户一句能行动的话
+            logger.warning("photo recognize failed: %s", type(exc).__name__)
+            return error("这张没认出来，换个角度、离近一点再拍一张试试", 502)
+        return jsonify(result)
 
     @app.patch("/api/pantry/<int:item_id>")
     @login_required

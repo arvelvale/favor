@@ -1,125 +1,141 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ArrowRight, BellRing, Check, ChartNoAxesColumn, CircleCheck, Droplet, MessageCircleHeart, ShieldCheck,
-  Sparkles, Sprout, Stethoscope, UtensilsCrossed,
+  ArrowRight, Camera, Carrot, Check, ChefHat, CircleCheck, Clock, Drumstick, Egg, Flame, HeartPulse, Leaf, LeafyGreen,
+  ListChecks, MessageSquareText, Milk, Refrigerator, ScanLine, ShieldCheck, ShoppingBasket, SlidersHorizontal, Sparkles,
+  UtensilsCrossed, type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../App'
-import { AnimatedNumber, MetricIcon, Ring } from '../components/ui'
+import { AnimatedNumber, Ring } from '../components/ui'
 import Logo, { LogoMark } from '../components/Logo'
 import { prefersReducedMotion, useInView, useReveal } from '../lib/motion'
-import type { Kind } from '../lib/api'
 import '../landing.css'
 
-// ---------------------------------------------------------- 首屏演示脚本
-interface Scene { user: string; cards: { kind: Kind; title: string }[]; reply: string }
-const SCENES: Scene[] = [
-  {
-    user: '午饭吃了牛肉面加卤蛋，下午跑了 25 分钟',
-    cards: [{ kind: 'meal', title: '午餐 · 牛肉面、卤蛋 · 625 kcal' }, { kind: 'exercise', title: '跑步 25 分钟 · 约 125 kcal' }],
-    reply: '都记好了。今天还可以吃约 **830 kcal**，晚餐来份清蒸鱼配青菜正合适。',
-  },
-  {
-    user: '昨晚一点多才睡，只睡了 6 个小时',
-    cards: [{ kind: 'sleep', title: '睡眠 6 小时 · 质量 2/5' }],
-    reply: '这周已经三次少于 7 小时了。要不要一起定个小目标：**23:30 前放下手机**？',
-  },
-  {
-    user: '早上称了一下 62.4 公斤',
-    cards: [{ kind: 'weight', title: '体重 62.4 kg' }],
-    reply: '比上周轻了 **0.6 kg**，节奏很健康，保持每周 0.5 kg 左右就好。',
-  },
+// ---------------------------------------------------------- 首屏演示：拍冰箱 → 认出食材 → 3 道推荐 → 做好了 → 自动记一餐
+const STAGES = [
+  { key: 'snap', label: '拍冰箱', icon: Camera },
+  { key: 'found', label: '认出食材', icon: ScanLine },
+  { key: 'recipes', label: '3 道推荐', icon: ChefHat },
+  { key: 'cooked', label: '做好了', icon: Check },
+  { key: 'logged', label: '记一餐', icon: HeartPulse },
+] as const
+const STAGE_MS = [2600, 3000, 3200, 2800, 3000]
+
+const SHELF: { icon: LucideIcon; c: string; x: number; y: number }[] = [
+  { icon: Egg, c: '#f0a43a', x: 16, y: 16 }, { icon: Milk, c: '#2f7cf6', x: 62, y: 12 },
+  { icon: LeafyGreen, c: '#1e9e5e', x: 22, y: 48 }, { icon: Carrot, c: '#f08a24', x: 58, y: 50 },
+  { icon: Drumstick, c: '#e5484d', x: 38, y: 78 },
+]
+const FOUND = [
+  { name: '鸡蛋', meta: '6 个', icon: Egg, c: '#f0a43a' },
+  { name: '番茄', meta: '3 个', icon: Carrot, c: '#e5484d' },
+  { name: '菠菜', meta: '还剩 1 天', icon: LeafyGreen, c: '#1e9e5e', warn: true },
+  { name: '牛奶', meta: '1 盒', icon: Milk, c: '#2f7cf6' },
+  { name: '鸡腿', meta: '2 只', icon: Drumstick, c: '#d9480f' },
+]
+const RECIPES = [
+  { title: '菠菜蛋花汤', tag: '现在就能做', note: '顺手用掉菠菜', min: 10, ok: true },
+  { title: '番茄炒蛋', tag: '现在就能做', note: '12 分钟出锅', min: 12, ok: true },
+  { title: '照烧鸡腿', tag: '还缺 1 样', note: '缺：照烧汁', min: 25, ok: false },
 ]
 
-type Phase = 'typing' | 'thinking' | 'cards' | 'reply' | 'hold'
-
-function useDemo() {
+function useStage() {
   const reduced = prefersReducedMotion()
-  const [scene, setScene] = useState(0)
-  const [phase, setPhase] = useState<Phase>(reduced ? 'hold' : 'typing')
-  const [typed, setTyped] = useState(reduced ? SCENES[0].user.length : 0)
-  const [cards, setCards] = useState(reduced ? SCENES[0].cards.length : 0)
-  const [replied, setReplied] = useState(reduced ? SCENES[0].reply.length : 0)
-  const s = SCENES[scene]
-
+  const [stage, setStage] = useState(reduced ? 2 : 0)
   useEffect(() => {
     if (reduced) return
-    let t: number
-    if (phase === 'typing') {
-      t = window.setTimeout(() => (typed < s.user.length ? setTyped(typed + 1) : setPhase('thinking')), typed < s.user.length ? 55 : 350)
-    } else if (phase === 'thinking') {
-      t = window.setTimeout(() => setPhase('cards'), 900)
-    } else if (phase === 'cards') {
-      t = window.setTimeout(() => (cards < s.cards.length ? setCards(cards + 1) : setPhase('reply')), 520)
-    } else if (phase === 'reply') {
-      t = window.setTimeout(() => (replied < s.reply.length ? setReplied(replied + 2) : setPhase('hold')), 28)
-    } else {
-      t = window.setTimeout(() => {
-        setScene((scene + 1) % SCENES.length); setTyped(0); setCards(0); setReplied(0); setPhase('typing')
-      }, 3200)
-    }
+    const t = window.setTimeout(() => setStage((stage + 1) % STAGES.length), STAGE_MS[stage])
     return () => window.clearTimeout(t)
-  }, [phase, typed, cards, replied, scene, s, reduced])
-
-  return { s, phase, typed, cards, replied }
-}
-
-function renderBold(text: string) {
-  // 演示里只有 **加粗** 一种标记；流式截断时未闭合的部分按普通文本显示
-  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-    part.startsWith('**') && part.endsWith('**') ? <strong key={i}>{part.slice(2, -2)}</strong> : <span key={i}>{part.replace(/\*/g, '')}</span>)
+  }, [stage, reduced])
+  return [stage, setStage] as const
 }
 
 function Demo() {
-  const { s, phase, typed, cards, replied } = useDemo()
-  const showUser = phase !== 'typing'
+  const [stage, setStage] = useStage()
+  const key = STAGES[stage].key
   return (
     <div className="demo">
       <div className="demo-window">
-        <div className="demo-bar"><i /><i /><i /><span><span className="live-dot" />Favor 在线</span></div>
-        <div className="demo-body compact" key={s.user}>
-          {showUser && <div className="msg user"><div className="bubble-user">{s.user}</div></div>}
-          {showUser && (
-            <div className="msg">
-              <LogoMark size={30} className="bot-mark" />
-              <div className="bot-body">
-                {phase === 'thinking' && <span className="typing"><i /><i /><i /></span>}
-                {cards > 0 && (
-                  <div className="tool-cards">
-                    {s.cards.slice(0, cards).map(c => (
-                      <div className="tool-card" key={c.title}>
-                        <MetricIcon kind={c.kind} size="sm" />
-                        <div className="t"><b>{c.title}</b><span>已记录</span></div>
-                        <CircleCheck size={16} className="ok" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {replied > 0 && <div className="md"><p>{renderBold(s.reply.slice(0, replied))}{phase === 'reply' && <span className="caret" />}</p></div>}
+        <div className="demo-bar"><i /><i /><i /><span><span className="live-dot" />今天吃什么</span></div>
+        <ol className="demo-steps" aria-label="Favor 的流程">
+          {STAGES.map((s, i) => (
+            <li key={s.key} className={i < stage ? 'done' : i === stage ? 'now' : ''}>
+              <button type="button" onClick={() => setStage(i)} aria-label={s.label}><s.icon size={13} /><span>{s.label}</span></button>
+            </li>
+          ))}
+        </ol>
+        <div className="demo-stage" key={key}>
+          {key === 'snap' && (
+            <div className="fridge">
+              <div className="fridge-door">
+                {SHELF.map(({ icon: Icon, c, x, y }, i) => (
+                  <span key={i} className="fridge-item" style={{ left: `${x}%`, top: `${y}%`, '--c': c, '--i': i } as CSSProperties}><Icon size={22} /></span>
+                ))}
+                <i className="shelf s1" /><i className="shelf s2" />
+                <span className="scan" />
+              </div>
+              <span className="shutter"><Camera size={18} /></span>
+            </div>
+          )}
+          {key === 'found' && (
+            <div className="found">
+              <p className="stage-title"><ScanLine size={15} />认出 5 样，确认一下就放进冰箱</p>
+              {FOUND.map((f, i) => (
+                <div className="found-row" key={f.name} style={{ '--i': i, '--c': f.c } as CSSProperties}>
+                  <span className="ck"><Check size={12} strokeWidth={3} /></span>
+                  <span className="dot"><f.icon size={15} /></span>
+                  <b>{f.name}</b><span className={`meta ${f.warn ? 'warn' : ''}`}>{f.meta}</span>
+                </div>
+              ))}
+              <span className="fake-btn" style={{ '--i': 6 } as CSSProperties}><Check size={14} />放进冰箱 5 样</span>
+            </div>
+          )}
+          {key === 'recipes' && (
+            <div className="recs">
+              <p className="stage-title"><Sparkles size={15} />现在就能做的排前面</p>
+              {RECIPES.map((r, i) => (
+                <div className="rec" key={r.title} style={{ '--i': i } as CSSProperties}>
+                  <span className={`rtag ${r.ok ? 'ok' : 'miss'}`}>{r.ok ? <Check size={11} strokeWidth={3} /> : <ShoppingBasket size={11} />}{r.tag}</span>
+                  <b>{r.title}</b>
+                  <span className="rmeta"><Clock size={12} />{r.min} 分钟 · {r.note}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {key === 'cooked' && (
+            <div className="cooked">
+              <span className="big-check"><Check size={30} strokeWidth={3} /></span>
+              <b>番茄炒蛋，做好了</b>
+              <div className="used">
+                <span style={{ '--i': 0 } as CSSProperties}>番茄 · 用完了</span>
+                <span style={{ '--i': 1 } as CSSProperties}>鸡蛋 · 还剩 3 个</span>
+              </div>
+              <small>冰箱已经自动更新</small>
+            </div>
+          )}
+          {key === 'logged' && (
+            <div className="logged">
+              <div className="meal-card">
+                <span className="dot"><UtensilsCrossed size={16} /></span>
+                <div><b>晚餐 · 番茄炒蛋</b><span>做菜后自动记录 · 约 380 kcal</span></div>
+                <CircleCheck size={18} className="ok" />
+              </div>
+              <div className="kcal">
+                <Ring value={58} size={86} stroke={9}><b style={{ fontSize: 16 }}>820</b><span>kcal</span></Ring>
+                <p>今天还能吃约 820 kcal。<br /><span>不用另外记，做菜顺手就记好了。</span></p>
               </div>
             </div>
           )}
         </div>
-        <div className="demo-input">
-          {phase === 'typing' ? <span style={{ color: 'var(--ink)' }}>{s.user.slice(0, typed)}<span className="caret" /></span> : '和 Favor 说说今天…'}
-          <span className="send-btn"><ArrowRight size={16} /></span>
-        </div>
       </div>
 
       <div className="float-card f1">
-        <Ring value={62} size={58} stroke={7}><b style={{ fontSize: 13 }}>62%</b></Ring>
-        <div><small>今日热量</small><b className="num"><AnimatedNumber value={830} /></b> <small style={{ display: 'inline' }}>kcal 剩余</small></div>
+        <span className="fc-ico" style={{ '--c': '#1e9e5e' } as CSSProperties}><Leaf size={18} /></span>
+        <div><small>快过期</small><b>菠菜 · 还剩 1 天</b></div>
       </div>
       <div className="float-card f2">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <MetricIcon kind="water" size="sm" /><small style={{ fontSize: 12.5, color: 'var(--ink-2)' }}>饮水</small>
-          <b className="num" style={{ marginLeft: 'auto', fontSize: 14 }}>1500<small style={{ display: 'inline' }}> / 2150</small></b>
-        </div>
-        <div className="bar"><i style={{ width: '70%', '--c': 'var(--water)' } as CSSProperties} /></div>
-      </div>
-      <div className="float-card f3">
-        <span className="habit-check on"><Check size={14} strokeWidth={3} /></span>
-        <span>23:30 前放下手机</span><span className="tag brand">连续 4 天</span>
+        <small>按你的情况推荐</small>
+        <div className="fc-chips"><span>1 人份</span><span>15 分钟内</span><span>只有小电锅</span><span>不吃香菜</span></div>
       </div>
     </div>
   )
@@ -132,10 +148,11 @@ function CountOnView({ value }: { value: number }) {
 }
 
 // ---------------------------------------------------------- 页面
-const PHRASES: [string, Kind][] = [
-  ['早饭两个包子一杯豆浆', 'meal'], ['今天称了 62.4 kg', 'weight'], ['昨晚只睡了 5 小时', 'sleep'], ['下午游泳 40 分钟', 'exercise'],
-  ['刚喝了一大杯水', 'water'], ['今天有点焦虑，胃也胀', 'mood'], ['帮我配一份 500 kcal 的晚餐', 'meal'], ['这周我吃得怎么样？', 'meal'],
-  ['奶茶去冰三分糖', 'meal'], ['爬楼梯 15 分钟', 'exercise'], ['午睡了 20 分钟', 'sleep'], ['想养成早睡的习惯', 'sleep'],
+const PHRASES: [string, string][] = [
+  ['冰箱里有半颗洋葱和三个鸡蛋', '#f08a24'], ['鸡胸肉明天就过期了', '#e5484d'], ['15 分钟能做什么', '#2f7cf6'],
+  ['两个人吃，不要辣', '#8b5cf6'], ['只有一个小电锅', '#1e9e5e'], ['家里有老人，做软一点', '#d9480f'],
+  ['番茄快坏了怎么用掉', '#e5484d'], ['不吃香菜', '#1e9e5e'], ['想吃点清淡的', '#2f7cf6'],
+  ['冻了一斤排骨', '#8b5cf6'], ['剩米饭能做什么', '#f08a24'], ['帮我凑一顿两菜一汤', '#d9480f'],
 ]
 
 export default function LandingPage() {
@@ -161,7 +178,7 @@ export default function LandingPage() {
         <div className="lp-wrap">
           <Link to="/" className="lp-logo"><Logo size={38} animated /></Link>
           <div className="lp-links">
-            <a href="#features">功能</a><a href="#how">怎么用</a><a href="#safety">安全边界</a>
+            <a href="#features">功能</a><a href="#how">怎么用</a><a href="#trust">放心用</a>
           </div>
           <div className="actions">
             {user ? <Link className="btn btn-primary" to="/app">进入工作台</Link> : <>
@@ -176,17 +193,17 @@ export default function LandingPage() {
         <div className="lp-bg"><div className="blob b1" /><div className="blob b2" /><div className="blob b3" /><div className="grid" /></div>
         <div className="lp-wrap">
           <div className="hero-in">
-            <span className="pill"><span className="tag">新</span>AI 健康管家 · 对话即记录</span>
-            <h1>说一句话，<br />健康就<span className="grad-text">记好了</span>。</h1>
-            <p className="lead">不用翻食物库、不用填表格。像跟朋友聊天一样告诉 Favor 今天吃了什么、睡得怎样，它会估算营养、记进工作台，再给你一条刚刚好的建议。</p>
+            <span className="pill"><span className="tag">新</span>AI 厨房搭子 · 拍一张冰箱就能开始</span>
+            <h1>冰箱里有什么，<br />今晚就<span className="grad-text">做什么</span>。</h1>
+            <p className="lead">拍一张冰箱、勾几样，或者随口说一句。Favor 记住你有什么、哪些快过期了，推荐现在就能做的菜；做完点一下，冰箱和这一餐都自动记好。</p>
             <div className="lp-cta">
               {cta}
               <a className="btn btn-lg" href="#how">看看怎么用</a>
             </div>
             <div className="lp-facts">
-              <div><b className="num">14</b>个 Agent 工具</div>
-              <div><b className="num">6</b>类健康数据</div>
-              <div><b className="num">0</b>张要填的表</div>
+              <div><b className="num">3</b>种录入方式</div>
+              <div><b className="num">3</b>道菜每次推荐</div>
+              <div><b className="num">0</b>个保质期要你记</div>
             </div>
           </div>
           <Demo />
@@ -196,8 +213,8 @@ export default function LandingPage() {
       <div className="marquee" aria-hidden>
         {[PHRASES.slice(0, half), PHRASES.slice(half)].map((row, r) => (
           <div className={`marquee-row ${r ? 'rev' : ''}`} key={r}>
-            {[...row, ...row].map(([text, kind], i) => (
-              <span className="marquee-item" key={i} style={{ '--c': `var(--${kind})` } as CSSProperties}><i />{text}</span>
+            {[...row, ...row].map(([text, c], i) => (
+              <span className="marquee-item" key={i} style={{ '--c': c } as CSSProperties}><i />{text}</span>
             ))}
           </div>
         ))}
@@ -207,65 +224,56 @@ export default function LandingPage() {
         <div className="lp-wrap">
           <div className="lp-head reveal">
             <span className="lp-eyebrow">FEATURES</span>
-            <h2>记录、分析、建议，<br />一个工作台全搞定</h2>
-            <p>Favor 把聊天和数据面板放在一起：你说，它记；你看，它提醒。</p>
+            <h2>剩下的食材，<br />不再放到坏</h2>
+            <p>通用聊天 AI 记不住你冰箱里有什么。Favor 记得，还会先帮你用掉快过期的。</p>
           </div>
           <div className="bento">
             <div className="card wide reveal">
-              <MetricIcon kind="meal" />
-              <h3>对话即记录</h3>
-              <p>一句话里有吃饭、运动、喝水，Favor 会拆开分别记录，营养按常见份量自动估算。</p>
-              <div className="visual mini-chat">
-                <div className="bubble-user">早饭两个肉包一杯豆浆，还走了 6000 步</div>
-                <div className="tool-card"><MetricIcon kind="meal" size="sm" /><div className="t"><b>早餐 · 肉包、豆浆 · 510 kcal</b><span>蛋白质 23g · 碳水 68g · 脂肪 16g</span></div><CircleCheck size={16} className="ok" /></div>
-                <div className="tool-card"><MetricIcon kind="exercise" size="sm" /><div className="t"><b>快走 50 分钟 · 约 190 kcal</b><span>已记录</span></div><CircleCheck size={16} className="ok" /></div>
-              </div>
-            </div>
-            <div className="card reveal d1">
-              <span className="metric-icon" style={{ '--c': 'var(--brand)' } as CSSProperties}><UtensilsCrossed size={17} /></span>
-              <h3>今天还能吃多少</h3>
-              <p>按身高体重、活动量和目标算出每日预算，运动消耗自动加回。</p>
-              <div className="visual" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <Ring value={68} size={104} stroke={11}><b style={{ fontSize: 20 }}>520</b><span>kcal 剩余</span></Ring>
-                <div style={{ flex: 1, display: 'grid', gap: 10 }}>
-                  {[['蛋白质', 72, 'var(--meal)'], ['碳水', 55, 'var(--weight)'], ['脂肪', 40, 'var(--mood)']].map(([l, v, c]) => (
-                    <div key={l as string}><div className="macro-row"><span>{l}</span><span>{v}%</span></div>
-                      <div className="bar"><i style={{ width: `${v}%`, '--c': c } as CSSProperties} /></div></div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="card reveal">
-              <span className="metric-icon" style={{ '--c': 'var(--water)' } as CSSProperties}><ChartNoAxesColumn size={17} /></span>
-              <h3>趋势一目了然</h3>
-              <p>体重、睡眠、热量、饮水，7 到 90 天的变化一眼看清。</p>
-              <div className="visual mini-bars">
-                {[62, 78, 54, 88, 70, 95, 66].map((h, i) => (
-                  <i key={i} style={{ height: `${h}%`, '--c': 'var(--sleep)', transitionDelay: `${i * 70}ms` } as CSSProperties} />
-                ))}
-              </div>
-            </div>
-            <div className="card reveal d1">
-              <span className="metric-icon" style={{ '--c': 'var(--exercise)' } as CSSProperties}><Sprout size={17} /></span>
-              <h3>小习惯，慢慢养</h3>
-              <p>想早睡、想多喝水？Favor 帮你拆成每天能打卡的一小步。</p>
-              <div className="visual" style={{ display: 'grid', gap: 2 }}>
-                {[['晚上 11:30 前放下手机', true], ['每天两份蔬菜', true], ['饭后散步 15 分钟', false]].map(([n, d]) => (
-                  <div className="habit" key={n as string}>
-                    <span className={`habit-check ${d ? 'on' : ''}`}>{d && <Check size={14} strokeWidth={3} />}</span>
-                    <span className={`name ${d ? 'done' : ''}`}>{n}</span>
+              <span className="metric-icon" style={{ '--c': '#2f7cf6' } as CSSProperties}><Camera size={17} /></span>
+              <h3>拍一张，冰箱就进来了</h3>
+              <p>打开冰箱拍一张，认出来的食材先给你确认；拿不准的默认不勾，不会把认错的东西放进去。也可以勾选常见食材，或者说一句「有鸡蛋、番茄、半颗洋葱」。</p>
+              <div className="visual lp-found">
+                {[['鸡蛋', '6 个', true], ['番茄', '3 个', true], ['菠菜', '1 把', true], ['可能是豆腐', '不太确定', false]].map(([n, m, on]) => (
+                  <div className={`lp-found-row ${on ? 'on' : ''}`} key={n as string}>
+                    <span className="ck">{on && <Check size={12} strokeWidth={3} />}</span><b>{n}</b><span>{m}</span>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="card navy reveal d2" id="safety">
+            <div className="card reveal d1">
+              <span className="metric-icon" style={{ '--c': '#1e9e5e' } as CSSProperties}><Leaf size={17} /></span>
+              <h3>快过期的先用掉</h3>
+              <p>保质期不用记，按食材和存放位置自动估算；快过期的会排在推荐前面。</p>
+              <div className="visual lp-expiry">
+                {[['菠菜', '约还剩 1 天', 'urgent'], ['番茄', '约还剩 4 天', 'soon'], ['鸡蛋', '约还剩 30 天', 'ok']].map(([n, t, tone]) => (
+                  <div key={n}><b>{n}</b><span className={`exp-pill ${tone}`}>{t}</span></div>
+                ))}
+              </div>
+            </div>
+            <div className="card reveal">
+              <span className="metric-icon" style={{ '--c': '#ff6b35' } as CSSProperties}><ChefHat size={17} /></span>
+              <h3>推荐看得懂</h3>
+              <p>「现在就能做」排前面；缺什么、用掉了哪些快过期的，卡片上写清楚。</p>
+              <div className="visual lp-mini-recs">
+                <span className="rtag ok"><Check size={11} strokeWidth={3} />现在就能做</span>
+                <span className="rtag save"><Leaf size={11} />用掉快过期的</span>
+                <span className="rtag miss"><ShoppingBasket size={11} />还缺 1 样</span>
+              </div>
+            </div>
+            <div className="card reveal d1">
+              <span className="metric-icon" style={{ '--c': '#8b5cf6' } as CSSProperties}><SlidersHorizontal size={17} /></span>
+              <h3>照你的情况来</h3>
+              <p>一分钟问卷：几个人吃、会不会做、有哪些厨具。没有烤箱就不推烤菜，过敏的由程序检查、一律排除。</p>
+              <div className="visual fc-chips big"><span>两菜一汤</span><span>新手模式</span><span>只有小电锅</span><span>花生过敏</span></div>
+            </div>
+            <div className="card navy reveal d2" id="trust">
               <span className="metric-icon" style={{ '--c': '#ffb08a', background: 'rgba(255,255,255,.1)' } as CSSProperties}><ShieldCheck size={17} /></span>
-              <h3>懂分寸的建议</h3>
-              <p>Favor 是生活方式助手，不是医生。</p>
+              <h3>做完点一下，就闭环了</h3>
+              <p>不用另外记账，健康数据是顺手留下的。</p>
               <div className="visual shield-list">
-                <div><Stethoscope size={15} />不做诊断，不给用药建议</div>
-                <div><BellRing size={15} />胸痛、呼吸困难等危险信号，第一时间提醒就医</div>
-                <div><ShieldCheck size={15} />热量目标设有安全下限，不鼓励极端节食</div>
+                <div><Refrigerator size={15} />用掉的食材自动从冰箱扣掉</div>
+                <div><Flame size={15} />这一餐按份数记下，热量为估算</div>
+                <div><Camera size={15} />照片只用来识别，不会保存</div>
               </div>
             </div>
           </div>
@@ -276,12 +284,12 @@ export default function LandingPage() {
         <div className="lp-wrap">
           <div className="lp-head reveal">
             <span className="lp-eyebrow">HOW IT WORKS</span>
-            <h2>三步，把照顾自己变简单</h2>
+            <h2>三步，从冰箱到饭桌</h2>
           </div>
           <div className="steps reveal">
-            <div className="step"><div className="n">1</div><h3>随口说一句</h3><p>在工作台右侧的 Favor 面板里，用最自然的话描述你的一天。</p><span className="example">“晚饭吃了半碗米饭和番茄炒蛋”</span></div>
-            <div className="step"><div className="n">2</div><h3>Favor 记录并估算</h3><p>它会调用工具记下数据、估算热量和营养，并告诉你还差多少。</p><span className="example">晚餐 · 420 kcal · 已记录</span></div>
-            <div className="step"><div className="n">3</div><h3>看趋势，拿建议</h3><p>工作台汇总每天的进度和长期趋势，Favor 给出下一步的小建议。</p><span className="example">这周睡眠平均 6.4 小时</span></div>
+            <div className="step"><div className="n">1</div><h3>放进冰箱</h3><p>拍一张、勾几样，或者说一句话。数量和保质期都可以不填。</p><span className="example"><Camera size={13} /> <ListChecks size={13} /> <MessageSquareText size={13} /> 三种方式随便选</span></div>
+            <div className="step"><div className="n">2</div><h3>帮我想想</h3><p>Favor 用现有食材推荐 3 道菜，现在就能做的排前面，顺手用掉快过期的。</p><span className="example">菠菜蛋花汤 · 10 分钟 · 不用买东西</span></div>
+            <div className="step"><div className="n">3</div><h3>做好了</h3><p>跟着步骤做，做完点一下：冰箱自动更新，这一餐也记好了。</p><span className="example">番茄 用完了 · 鸡蛋 还剩 3 个</span></div>
           </div>
         </div>
       </section>
@@ -289,18 +297,18 @@ export default function LandingPage() {
       <section className="band">
         <div className="orb a" /><div className="orb b" />
         <div className="lp-wrap band-grid reveal">
-          <div><b className="num"><CountOnView value={14} /><em>个</em></b><span>Agent 可调用的健康工具</span></div>
-          <div><b className="num"><CountOnView value={6} /><em>类</em></b><span>饮食、饮水、运动、睡眠、体重、心情</span></div>
-          <div><b className="num"><CountOnView value={90} /><em>天</em></b><span>趋势回看范围</span></div>
-          <div><b className="num"><CountOnView value={1} /><em>句话</em></b><span>就能完成一次记录</span></div>
+          <div><b className="num"><CountOnView value={3} /><em>种</em></b><span>录入方式：拍照、勾选、说一句</span></div>
+          <div><b className="num"><CountOnView value={2} /><em>天</em></b><span>内要过期的，优先用掉</span></div>
+          <div><b className="num"><CountOnView value={8} /><em>题</em></b><span>问卷最多这么多，每题都会改变推荐</span></div>
+          <div><b className="num"><CountOnView value={1} /><em>步</em></b><span>做好了：扣库存、记一餐一起完成</span></div>
         </div>
       </section>
 
       <section className="final">
         <div className="lp-wrap">
           <div className="final-box reveal">
-            <Sparkles size={28} />
-            <h2>从今天的第一杯水开始</h2>
+            <LogoMark size={44} animated />
+            <h2>今晚，先打开冰箱看看</h2>
             <p>注册只需要一个用户名。你的数据只属于你，可以随时查看和删除。</p>
             <Link className="btn btn-lg" to={user ? '/app' : '/register'}>{user ? '进入工作台' : '免费创建账号'}<ArrowRight size={17} /></Link>
           </div>
@@ -309,8 +317,8 @@ export default function LandingPage() {
 
       <footer className="lp-foot">
         <div className="lp-wrap">
-          <span className="lp-logo"><Logo size={30} subtitle="AI 健康管家" /></span>
-          <span><MessageCircleHeart size={13} style={{ verticalAlign: -2 }} /> Favor 提供生活方式建议，不能替代专业医疗诊断。<Droplet size={13} style={{ verticalAlign: -2, marginLeft: 8 }} /> © 2026 Favor</span>
+          <span className="lp-logo"><Logo size={30} subtitle="AI 厨房搭子" /></span>
+          <span>菜谱由 AI 生成，热量与营养为估算，不能替代专业医疗或营养建议。 © 2026 Favor</span>
         </div>
       </footer>
     </div>

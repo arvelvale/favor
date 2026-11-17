@@ -1,6 +1,6 @@
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ChartNoAxesColumn, MessageCircleHeart, Sprout } from 'lucide-react'
+import { ArrowLeft, Camera, ChefHat, Leaf } from 'lucide-react'
 import Logo from '../components/Logo'
 import { api, ApiError, type User } from '../lib/api'
 import { useAuth } from '../App'
@@ -8,9 +8,9 @@ import { clearPrefsCache } from '../lib/prefs'
 import { clearOnboardingCache } from '../lib/onboarding'
 
 const FEATS = [
-  { icon: MessageCircleHeart, color: '#ff9a6b', title: '说一句就记好', text: '“午饭一碗牛肉面”——热量和营养自动估算' },
-  { icon: ChartNoAxesColumn, color: '#7fb6ff', title: '看懂自己的趋势', text: '体重、睡眠、饮食与运动，一眼看清变化' },
-  { icon: Sprout, color: '#6fdc9f', title: '小习惯慢慢养', text: '把目标拆成每天能打卡的一小步' },
+  { icon: Camera, color: '#7fb6ff', title: '拍一张就记住', text: '拍冰箱、勾几样或说一句，Favor 记住你有什么' },
+  { icon: Leaf, color: '#6fdc9f', title: '快过期的先用掉', text: '保质期不用记，快坏的会排在推荐前面' },
+  { icon: ChefHat, color: '#ff9a6b', title: '做完点一下就好', text: '自动扣掉用掉的食材，这一餐也顺手记下' },
 ]
 
 export default function AuthPage({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
@@ -56,8 +56,8 @@ export default function AuthPage({ initialMode = 'login' }: { initialMode?: 'log
           <Link to="/" className="wb-brand" style={{ padding: 0 }}>
             <Logo size={42} tone="light" subtitle="AI 厨房搭子" animated />
           </Link>
-          <h1>照顾好自己，<br />从<span className="grad-text">记下今天</span>开始。</h1>
-          <p className="lead">Favor 是一位懂营养学的 AI 朋友。你只管像聊天一样告诉它，记录、分析和建议交给它。</p>
+          <h1>冰箱里有什么，<br />今晚就<span className="grad-text">做什么</span>。</h1>
+          <p className="lead">Favor 是你的 AI 厨房搭子：记住冰箱里的东西，推荐现在就能做的菜，少浪费、少纠结。</p>
         </div>
         <div className="auth-feats">
           {FEATS.map(f => (

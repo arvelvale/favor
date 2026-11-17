@@ -206,14 +206,16 @@ p { margin: 0; }
 .logo-o { background: linear-gradient(135deg, #ff5a2a, #ffb547); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .logo-sub { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; letter-spacing: .02em; }
 .logo-lockup.light .logo-sub { color: rgba(255, 255, 255, .5); }
-.logo-mark .logo-heart { transform-box: fill-box; transform-origin: center; }
+.logo-mark .logo-pot { transform-box: fill-box; transform-origin: 50% 100%; }
 .logo-mark .logo-spark { transform-box: fill-box; transform-origin: center; }
-.logo-mark.is-animated .logo-pulse { stroke-dasharray: 1; animation: logo-draw 1.6s .3s var(--ease) both; }
-.logo-mark.is-animated .logo-heart { animation: logo-beat 2.8s 1.9s ease-in-out infinite; }
+.logo-mark.is-animated .logo-steam { stroke-dasharray: 1; animation: logo-draw 1.4s .3s var(--ease) both, logo-steam 3s 1.8s ease-in-out infinite; }
+.logo-mark.is-animated .logo-pot { animation: logo-toss 3.6s 1.9s ease-in-out infinite; }
 .logo-mark.is-animated .logo-spark { animation: logo-twinkle 3.2s 1.2s ease-in-out infinite; }
-.logo-lockup:hover .logo-mark .logo-heart { animation: logo-beat 1s ease-in-out; }
+.logo-lockup:hover .logo-mark .logo-pot { animation: logo-toss 1s ease-in-out; }
 @keyframes logo-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-@keyframes logo-beat { 0%, 100% { transform: scale(1); } 14% { transform: scale(1.08); } 28% { transform: scale(.98); } 42% { transform: scale(1.05); } 60% { transform: scale(1); } }
+/* 颠一下锅：向上一跳略微倾斜再落回；热气上下飘 */
+@keyframes logo-toss { 0%, 100% { transform: none; } 12% { transform: translateY(-1.6px) rotate(-4deg); } 24% { transform: translateY(.4px) rotate(1.5deg); } 34% { transform: none; } }
+@keyframes logo-steam { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(-1.4px); opacity: .7; } }
 @keyframes logo-twinkle { 0%, 100% { transform: scale(1) rotate(0); opacity: 1; } 50% { transform: scale(.55) rotate(45deg); opacity: .7; } }
 .wb-brand b { font-size: 18px; font-weight: 600; letter-spacing: -.02em; display: block; line-height: 1.1; }
 .wb-brand span { font-size: 11.5px; color: rgba(255, 255, 255, .5); }
@@ -1116,3 +1118,29 @@ a.image-frame:hover img.in { transform: scale(1.03); }
   .tour-dim, .tour-bubble, .tour-pill, .tour-finish, .tip-banner { animation: none; }
   .tour-ring { animation: none; transition: none; }
 }
+
+/* ------------------------------------------------------------ 拍一张（拍冰箱照片识别食材） */
+.photo-drop { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 26px 18px;
+  border: 1.5px dashed var(--line-strong); border-radius: 18px; background: var(--surface-2); position: relative; overflow: hidden; }
+.photo-drop p { margin: 0; font-size: 14px; color: var(--ink); }
+.photo-drop small { font-size: 12px; color: var(--ink-3); }
+.photo-ico { width: 54px; height: 54px; border-radius: 18px; display: grid; place-items: center; color: #2f7cf6; background: #eaf2ff; }
+.photo-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.photo-drop img { width: min(260px, 100%); max-height: 220px; object-fit: cover; border-radius: 14px; }
+.photo-drop.busy img { filter: saturate(.8) brightness(.96); }
+/* 识别中：一道扫描光从上往下扫过照片 */
+.photo-drop.busy::after { content: ""; position: absolute; left: 0; right: 0; top: -40%; height: 40%; pointer-events: none;
+  background: linear-gradient(180deg, rgba(47, 124, 246, 0) 0%, rgba(47, 124, 246, .16) 70%, rgba(47, 124, 246, .5) 100%);
+  animation: photo-scan 1.6s ease-in-out infinite; }
+@keyframes photo-scan { to { top: 100%; } }
+.photo-wait { display: inline-flex; align-items: center; gap: 8px; color: #1f5fc4 !important; font-weight: 500; }
+.photo-head { display: flex; align-items: center; gap: 12px; }
+.photo-thumb { width: 64px; height: 64px; border-radius: 14px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--line); }
+.photo-head b { display: block; font-weight: 600; font-size: 15px; }
+.photo-head span { font-size: 12.5px; color: var(--ink-3); }
+.parsed-row.pickable { cursor: pointer; transition: border-color .2s, background .2s, opacity .2s; }
+.parsed-row.pickable:not(.on) { opacity: .62; }
+.parsed-row.pickable.on { border-color: var(--brand-tint); background: var(--brand-soft); }
+.parsed-row.pickable input { width: 18px; height: 18px; accent-color: var(--brand); flex-shrink: 0; cursor: pointer; }
+.unsure { font-style: normal; font-size: 11px; font-weight: 500; color: #8a5a00; background: #fff4d6; border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
+@media (prefers-reduced-motion: reduce) { .photo-drop.busy::after { animation: none; display: none; } }

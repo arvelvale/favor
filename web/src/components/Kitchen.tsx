@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Check, CircleAlert, Clock, Flame, Leaf, ListChecks, Loader2, MessageSquareText, Plus, ShoppingBasket, Sparkles, X,
+  Camera, Check, CircleAlert, Clock, Flame, ImageIcon, Leaf, ListChecks, Loader2, MessageSquareText, Plus, ShoppingBasket,
+  Sparkles, X,
 } from 'lucide-react'
 import { api, ApiError, type CatalogGroup, type PantryItem, type ParsedItem, type RecipeBrief } from '../lib/api'
 import { catMeta, DIFFICULTY, expiryInfo, formatQty } from '../lib/kitchen'
 import { emitDataChanged } from '../lib/motion'
 import { useToast } from './ui'
+import { compressImage } from '../lib/image'
+import { useAuth } from '../App'
+
+type PhotoItem = ParsedItem & { sure: boolean }
 
 // ---------------------------------------------------------- 到期提示
 export function ExpiryPill({ daysLeft, estimated }: { daysLeft: number | null; estimated?: boolean }) {
@@ -24,12 +29,19 @@ export function CatDot({ category, size = 30 }: { category: string; size?: numbe
   )
 }
 
-// ---------------------------------------------------------- 加食材：勾选常见 / 说一句话
+// ---------------------------------------------------------- 加食材：勾选常见 / 说一句话 / 拍一张
 export function PantryAdder({ existing, onAdded, autoFocus = false }: {
   existing: PantryItem[]; onAdded?: (items: PantryItem[]) => void; autoFocus?: boolean
 }) {
   const toast = useToast()
-  const [mode, setMode] = useState<'pick' | 'say'>('pick')
+  const { visionEnabled } = useAuth()
+  const [mode, setMode] = useState<'pick' | 'say' | 'photo'>('pick')
+  // 拍一张：照片只在浏览器里压缩后发去识别，服务端不保存；识别结果先确认再入库
+  const camRef = useRef<HTMLInputElement>(null)
+  const albumRef = useRef<HTMLInputElement>(null)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [shot, setShot] = useState<{ items: PhotoItem[]; note: string } | null>(null)
+  const [checked, setChecked] = useState<Set<number>>(new Set())
   const [groups, setGroups] = useState<CatalogGroup[]>([])
   const [picked, setPicked] = useState<string[]>([])
   const [text, setText] = useState('')
@@ -48,7 +60,7 @@ export function PantryAdder({ existing, onAdded, autoFocus = false }: {
     try {
       const res = await api.post<{ items: PantryItem[] }>('/api/pantry', { items, source })
       toast(`放进冰箱了：${res.items.map(i => i.name).join('、')}`)
-      setPicked([]); setText(''); setParsed(null)
+      setPicked([]); setText(''); setParsed(null); setShot(null); setPhotoUrl(null)
       emitDataChanged()
       onAdded?.(res.items)
     } catch (e) { toast(e instanceof ApiError ? e.message : '没加上，再试一次') }
@@ -66,6 +78,24 @@ export function PantryAdder({ existing, onAdded, autoFocus = false }: {
     finally { setBusy(false) }
   }
 
+  async function onPhoto(file: File | undefined) {
+    if (!file) return
+    setBusy(true); setShot(null)
+    try {
+      const url = await compressImage(file)
+      setPhotoUrl(url)
+      const res = await api.post<{ items: PhotoItem[]; note: string }>('/api/pantry/photo', { image: url })
+      setShot(res)
+      // 确定的默认勾上，不太确定的默认不勾：宁可少放，也别把认错的东西放进冰箱
+      setChecked(new Set(res.items.flatMap((it, i) => (it.sure ? [i] : []))))
+    } catch (e) {
+      setPhotoUrl(null)
+      toast(e instanceof ApiError || e instanceof Error ? e.message : '没认出来，再试一次')
+    } finally { setBusy(false) }
+  }
+  const retake = () => { setShot(null); setPhotoUrl(null); camRef.current?.click() }
+  const flip = (i: number) => setChecked(c => { const n = new Set(c); if (n.has(i)) n.delete(i); else n.add(i); return n })
+
   const toggle = (name: string) => setPicked(p => (p.includes(name) ? p.filter(n => n !== name) : [...p, name]))
 
   return (
@@ -73,7 +103,63 @@ export function PantryAdder({ existing, onAdded, autoFocus = false }: {
       <div className="segmented adder-tabs">
         <button className={mode === 'pick' ? 'on' : ''} onClick={() => setMode('pick')}><ListChecks size={14} />勾选常见食材</button>
         <button className={mode === 'say' ? 'on' : ''} onClick={() => setMode('say')}><MessageSquareText size={14} />说一句话</button>
+        {visionEnabled && (
+          // 点这个标签就直接打开相机：拍照 → 确认放进冰箱，一共 3 次点击
+          <button className={mode === 'photo' ? 'on' : ''}
+            onClick={() => { setMode('photo'); if (!shot && !busy) camRef.current?.click() }}><Camera size={14} />拍一张</button>
+        )}
       </div>
+      {visionEnabled && <>
+        <input ref={camRef} type="file" accept="image/*" capture="environment" hidden
+          onChange={e => { void onPhoto(e.target.files?.[0]); e.target.value = '' }} />
+        <input ref={albumRef} type="file" accept="image/*" hidden
+          onChange={e => { void onPhoto(e.target.files?.[0]); e.target.value = '' }} />
+      </>}
+
+      {mode === 'photo' && !shot && (
+        <div className={`photo-drop ${busy ? 'busy' : ''}`}>
+          {photoUrl ? <img src={photoUrl} alt="刚拍的照片" /> : <span className="photo-ico"><Camera size={26} /></span>}
+          {busy ? <p className="photo-wait"><Loader2 size={16} className="spin" />正在认照片里的食材…</p> : <>
+            <p>打开冰箱拍一张，Favor 帮你认出里面有什么</p>
+            <div className="photo-actions">
+              <button className="btn btn-primary" onClick={() => camRef.current?.click()}><Camera size={16} />拍一张</button>
+              <button className="btn btn-ghost" onClick={() => albumRef.current?.click()}><ImageIcon size={16} />从相册选</button>
+            </div>
+            <small>照片只用来识别，不会保存。认出来的会先给你确认。</small>
+          </>}
+        </div>
+      )}
+      {mode === 'photo' && shot && (
+        <>
+          <div className="photo-head">
+            {photoUrl && <img className="photo-thumb" src={photoUrl} alt="刚拍的照片" />}
+            <div className="grow">
+              <b>{shot.items.length ? `认出 ${shot.items.length} 样` : '没认出食材'}</b>
+              <span>{shot.items.length ? (shot.note || '不太确定的没勾上，看一眼再放进去') : (shot.note || '换个角度、离近一点再拍一张试试')}</span>
+            </div>
+          </div>
+          {shot.items.length > 0 && (
+            <div className="parsed-list">
+              {shot.items.map((p, i) => (
+                <label className={`parsed-row pickable ${checked.has(i) ? 'on' : ''}`} key={`${p.name}-${i}`}>
+                  <input type="checkbox" checked={checked.has(i)} onChange={() => flip(i)} />
+                  <CatDot category={p.category} size={28} />
+                  <div className="grow"><b>{p.name}{!p.sure && <em className="unsure">不太确定</em>}</b>
+                    <span>{[formatQty(p.quantity, p.unit), p.storage_label, p.category_label].filter(Boolean).join(' · ')}</span></div>
+                  <ExpiryPill daysLeft={p.days_left} estimated={p.expires_estimated} />
+                </label>
+              ))}
+            </div>
+          )}
+          <div className="adder-foot">
+            <button className="btn btn-ghost" onClick={retake} disabled={busy}><Camera size={15} />重拍</button>
+            <button className="btn btn-primary" disabled={!checked.size || busy}
+              onClick={() => add(shot.items.filter((_, i) => checked.has(i)).map(p => ({ name: p.name, quantity: p.quantity, unit: p.unit, storage: p.storage, category: p.category })), 'photo')}>
+              {busy ? <Loader2 size={16} className="spin" /> : <Check size={16} />}放进冰箱 {checked.size} 样
+            </button>
+          </div>
+        </>
+      )}
 
       {mode === 'pick' && (
         <>
