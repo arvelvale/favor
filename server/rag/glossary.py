@@ -84,6 +84,7 @@ def tool_description():
         return SEARCH_NUTRITION_BASE
     return (
         SEARCH_NUTRITION_BASE
-        + " 检索时请优先使用知识库实际用词（用户说法与下面不同时，换成这里的说法再查）："
+        + " 检索时请优先使用知识库实际用词（用户说法与下面不同时，换成这里的说法再查），"
+        + "并尽量给出 1-3 种不同说法，系统会融合各说法结果："
         + "、".join(menu) + "。"
     )

@@ -39,3 +39,7 @@ RAG_HEADING_BOOST = float(os.getenv("RAG_HEADING_BOOST") or "0.8")
 RAG_TAG_BOOST = float(os.getenv("RAG_TAG_BOOST") or "0.8")
 # 重排候选池放大倍数：候选数 = top_k × 此值，放大后才不会把该排前面的片段挡在池外。
 RAG_RERANK_POOL_MULT = max(1, int(os.getenv("RAG_RERANK_POOL_MULT") or "3"))
+
+# 多查询 RRF 融合常数：标准值 60（越小越偏向各路第一名）。
+# 只在 search_multi 用到；单查询 search 不受影响。
+RAG_RRF_K = max(1, int(os.getenv("RAG_RRF_K") or "60"))

@@ -62,11 +62,46 @@ def is_enabled():
     return bool(settings.RAG_ENABLED)
 
 
+def _chunk_item(chunk, score, citation):
+    """把 Chunk 转成给模型/前端用的 dict。"""
+    return {
+        "chunk_id": chunk.chunk_id,
+        "doc_id": chunk.doc_id,
+        "title": chunk.title,
+        "heading": chunk.heading,
+        "text": chunk.text,
+        "publisher": chunk.publisher,
+        "published": chunk.published,
+        "url": chunk.source_url,
+        "evidence_level": chunk.evidence_level,
+        "audience": chunk.audience,
+        "score": round(float(score), 4),
+        "citation": citation,
+    }
+
+
+def _cap_per_doc(indices, chunks, limit):
+    """按给定顺序取片段，每篇最多 2 段，最多 limit 个，返回 (index, 原分数) 列表。"""
+    picked = []
+    per_doc = {}
+    for i, score in indices:
+        chunk = chunks[i]
+        if per_doc.get(chunk.doc_id, 0) >= 2:
+            continue
+        per_doc[chunk.doc_id] = per_doc.get(chunk.doc_id, 0) + 1
+        picked.append((i, score))
+        if len(picked) >= limit:
+            break
+    return picked
+
+
 def search(query, top_k=None):
     """返回命中的片段列表（dict），已带 1 起始的 citation 编号；无命中返回 []。
 
     两阶段：① 纯 BM25 + 门槛判定有无依据（安全底线）；
             ② 仅在合格候选池内用标题/小标题/标签信号重排，只改顺序。
+
+    这是单说法路径，评测量产线与不需要多说法扩展的调用都走这里，行为保持不变。
     """
     if not is_enabled():
         return []
@@ -110,28 +145,86 @@ def search(query, top_k=None):
         reverse=True,
     )
 
-    per_doc = {}
-    hits = []
-    for i in candidates:
-        chunk = chunks[i]
-        if per_doc.get(chunk.doc_id, 0) >= 2:
-            continue
-        per_doc[chunk.doc_id] = per_doc.get(chunk.doc_id, 0) + 1
-        item = {
-            "chunk_id": chunk.chunk_id,
-            "doc_id": chunk.doc_id,
-            "title": chunk.title,
-            "heading": chunk.heading,
-            "text": chunk.text,
-            "publisher": chunk.publisher,
-            "published": chunk.published,
-            "url": chunk.source_url,
-            "evidence_level": chunk.evidence_level,
-            "audience": chunk.audience,
-            "score": round(float(scores[i]), 4),
-            "citation": len(hits) + 1,
-        }
-        hits.append(item)
-        if len(hits) >= limit:
+    picked = _cap_per_doc([(i, scores[i]) for i in candidates], chunks, limit)
+    return [_chunk_item(chunks[i], score, n)
+            for n, (i, score) in enumerate(picked, start=1)]
+
+
+def _rank_for_fusion(query, chunks, limit):
+    """为 RRF 融合准备一条说法的排名列表：[(chunk_index, raw_score), ...]。
+
+    复用 search 的两阶段逻辑与同一条绝对门槛：不过门槛的说法直接返回空列表，
+    不会给融合贡献任何候选，也不会拉低其他说法的判定。
+    """
+    if not (query or "").strip():
+        return []
+    query_tokens = tokenize(expand_query(query))
+    scores = build_index().scores(query_tokens)
+    ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
+    best = scores[ranked[0]] if ranked else 0.0
+    if best <= 0 or best < settings.RAG_MIN_ABS_SCORE:
+        return []
+
+    threshold = best * settings.RAG_MIN_REL_SCORE
+    candidates = []
+    for i in ranked:
+        if scores[i] <= 0 or scores[i] < threshold:
             break
-    return hits
+        candidates.append((i, scores[i]))
+        if len(candidates) >= limit * settings.RAG_RERANK_POOL_MULT:
+            break
+
+    query_set = set(query_tokens)
+    fields = field_tokens()
+    candidates.sort(
+        key=lambda pair: (
+            pair[1]
+            + len(query_set & fields[pair[0]][0]) * settings.RAG_TITLE_BOOST
+            + len(query_set & fields[pair[0]][1]) * settings.RAG_HEADING_BOOST
+            + len(query_set & fields[pair[0]][2]) * settings.RAG_TAG_BOOST,
+            pair[1],
+        ),
+        reverse=True,
+    )
+    return candidates
+
+
+def search_multi(queries, top_k=None):
+    """多条同义说法分别检索，用 RRF（倒数排名融合）合并成一份结果。
+
+    安全底线（最重要的是别写反）：
+    - 每条说法各自过绝对门槛；不过门槛的说法不贡献候选。
+    - 只要有一条说法过线，就认为「有可靠依据」，正常作答。
+    - 只有全部说法都没过线，才返回 [] 触发拒答。
+
+    RRF 只按名次融合、不按分数相加（BM25 分数在不同说法间不可直接比较），
+    某片段得分 = Σ 1/(k + 名次)，名次从 1 开始，k = settings.RAG_RRF_K。
+    """
+    if not is_enabled():
+        return []
+    chunks = load_corpus()
+    if not chunks:
+        return []
+    limit = top_k if top_k is not None else settings.RAG_TOP_K
+    queries = [q for q in (queries or []) if isinstance(q, str) and q.strip()]
+    if not queries:
+        return []
+
+    rrf_scores = {}   # chunk_index -> 融合分
+    raw_scores = {}   # chunk_index -> 原始 BM25 分（仅用于展示/排序平局打破）
+    for query in queries:
+        for rank, (i, raw) in enumerate(_rank_for_fusion(query, chunks, limit), start=1):
+            rrf_scores[i] = rrf_scores.get(i, 0.0) + 1.0 / (settings.RAG_RRF_K + rank)
+            # 展示用原始分取各路最大值；注意融合排序完全由 rrf_scores 决定，
+            # raw 只作同分时的次要键，不参与「是否有依据」判定。
+            if raw > raw_scores.get(i, 0.0):
+                raw_scores[i] = raw
+
+    # 全部说法都没过门槛 → 无依据，拒答。
+    if not rrf_scores:
+        return []
+
+    ranked = sorted(rrf_scores, key=lambda i: (rrf_scores[i], raw_scores.get(i, 0.0)), reverse=True)
+    picked = _cap_per_doc([(i, raw_scores.get(i, 0.0)) for i in ranked], chunks, limit)
+    return [_chunk_item(chunks[i], score, n)
+            for n, (i, score) in enumerate(picked, start=1)]

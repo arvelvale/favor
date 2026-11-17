@@ -52,6 +52,7 @@ class CorpusTests(unittest.TestCase):
         """search_nutrition 的工具描述里带上了语料用词菜单。"""
         desc = tool_description()
         self.assertIn("检索时请优先使用知识库实际用词", desc)
+        self.assertIn("1-3 种不同说法", desc)
         self.assertIn("番茄" if "番茄" in keyword_menu() else "蛋白质", desc)
 
 
@@ -106,6 +107,38 @@ class RetrievalTests(unittest.TestCase):
             else:
                 sys.modules["jieba"] = saved
             importlib.reload(tok)
+
+
+class MultiQueryTests(unittest.TestCase):
+    """方案2：多说法检索 + RRF 融合的核心不变量。"""
+
+    def test_single_query_matches_search(self):
+        """只有一个说法时，融合结果必须和单查询 search 完全一致（退化一致性）。"""
+        for q in ("每天应该吃多少蔬菜", "成年人每天食盐不超过多少", "阿司匹林的用法用量"):
+            self.assertEqual([h["doc_id"] for h in rag_retriever.search(q)],
+                             [h["doc_id"] for h in rag_retriever.search_multi([q])], q)
+
+    def test_multi_query_refusal_safety(self):
+        """安全底线：对照题即使拆成多个说法，也必须全部拒答。"""
+        cases = [
+            ["阿司匹林的用法用量", "阿司匹林吃多少片", "阿司匹林怎么服用"],
+            ["股票代码600519今天涨跌", "贵州茅台股价", "今天大盘行情"],
+            ["左甲状腺素钠片一片多少毫克", "优甲乐剂量", "甲状腺药物用法"],
+        ]
+        for queries in cases:
+            self.assertEqual(rag_retriever.search_multi(queries), [], queries)
+
+    def test_multi_query_fuses_synonyms(self):
+        """多说法融合：同义问法应把正确资料带进结果，且不破坏 citation 编号。"""
+        hits = rag_retriever.search_multi(["西红柿有什么营养", "番茄的营养价值", "深色蔬菜的好处"])
+        self.assertTrue(hits, "同义说法应能命中资料")
+        self.assertEqual([h["citation"] for h in hits], list(range(1, len(hits) + 1)))
+        self.assertTrue(any(h["doc_id"].startswith("cdg2022") for h in hits),
+                        "应命中膳食指南类资料")
+
+    def test_multi_query_citation_numbers_sequential(self):
+        hits = rag_retriever.search_multi(["每天吃多少蔬菜", "蔬菜摄入量建议"])
+        self.assertEqual([h["citation"] for h in hits], list(range(1, len(hits) + 1)))
 
 
 class PromptSafetyTests(unittest.TestCase):
@@ -164,6 +197,35 @@ class ToolIntegrationTests(unittest.TestCase):
         from agent import tools
         names = [s["function"]["name"] for s in tools.schemas(rag_enabled=False)]
         self.assertNotIn("search_nutrition", names)
+
+    def test_schema_queries_is_array(self):
+        """方案2：工具参数改为 queries 字符串数组，引导模型给多种说法。"""
+        from agent import tools
+        schemas = tools.schemas(image_enabled=False, rag_enabled=True)
+        fn = next(s["function"] for s in schemas if s["function"]["name"] == "search_nutrition")
+        self.assertIn("queries", fn["parameters"]["properties"])
+        self.assertEqual(fn["parameters"]["properties"]["queries"]["type"], "array")
+        self.assertIn("queries", fn["parameters"]["required"])
+
+    def test_tool_accepts_queries_array(self):
+        """新调用：传 queries 数组，正常返回引用。"""
+        from agent import tools
+        ctx = tools.ToolContext(conn=NS(commit=lambda: None, rollback=lambda: None),
+                                user_id=1, now=datetime.now())
+        result, cards = tools.execute(ctx, "search_nutrition",
+                                      json.dumps({"queries": ["每天吃多少蔬菜", "蔬菜摄入量建议"]}))
+        self.assertTrue(result["ok"])
+        self.assertGreater(result["hit_count"], 0)
+        self.assertEqual(cards[0]["type"], "sources")
+
+    def test_tool_still_accepts_legacy_query_string(self):
+        """兼容：老的 query 单字符串调用行为不变（离线评测/旧测试依赖）。"""
+        from agent import tools
+        ctx = tools.ToolContext(conn=NS(commit=lambda: None, rollback=lambda: None),
+                                user_id=1, now=datetime.now())
+        result, _ = tools.execute(ctx, "search_nutrition", json.dumps({"query": "成年人每天食盐不超过多少"}))
+        self.assertTrue(result["ok"])
+        self.assertGreater(result["hit_count"], 0)
 
     def test_tool_returns_citations_and_card(self):
         from agent import tools

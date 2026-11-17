@@ -263,13 +263,28 @@ def generate_food_image(ctx, args):
 
 
 @tool("search_nutrition", rag_glossary.tool_description(),
-      {"query": {"type": "string", "description": "要查询的营养问题，如 每天吃多少蔬菜、菠菜补铁吗、孕妇能喝牛奶吗"}},
-      ["query"])
+      {"queries": {"type": "array", "items": {"type": "string"},
+                   "description": "1-3 种不同说法的营养问题。把用户的口语换成知识库用词，"
+                                  "并尽量多给一两种同义问法（如用户问「西红柿补铁吗」，"
+                                  "可给 [「西红柿补铁吗」,「番茄补铁」,「深色蔬菜补铁」]），"
+                                  "系统会融合各说法的检索结果。至少 1 个。"}},
+      ["queries"])
 def search_nutrition(ctx, args):
-    query = str(args.get("query") or "").strip()
-    if not query:
+    # 兼容老调用：单字符串 query 当作只有一个说法的数组，离线评测/旧测试都不受影响。
+    raw = args.get("queries")
+    if raw is None:
+        raw = args.get("query")
+    if isinstance(raw, str):
+        queries = [raw]
+    elif isinstance(raw, list):
+        queries = [str(q).strip() for q in raw if str(q).strip()]
+    else:
+        queries = []
+    queries = [q for q in queries if q]
+    if not queries:
         return {"ok": False, "error": "查询内容为空"}, []
-    hits = rag_retriever.search(query)
+    query = queries[0]  # 回显/卡片用第一个说法
+    hits = rag_retriever.search_multi(queries)
     # 检索器每次都从 [1] 编号；同一轮第二次检索要接着上一批往后排，
     # 否则回答里的 [1] 会同时对应两条出处，引用自检也分不清。
     offset = ctx.citations_this_turn
