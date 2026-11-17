@@ -355,11 +355,14 @@ def recommend_recipes(ctx, args):
     result = kitchen.recommend(ctx.conn, ctx.llm, ctx.model, ctx.user_id, ctx.now,
                                str(args.get("note") or ""), ctx.recipe_limit)
     brief = [{"title": r["title"], "minutes": r["minutes"], "summary": r["summary"],
-              "missing": r["missing"], "uses_expiring": r["uses_expiring"]} for r in result["recipes"]]
+              "missing": r["missing"], "uses_expiring": r["uses_expiring"],
+              "not_fitting_user_settings": r.get("fit") or [], "removed_ingredients": r.get("stripped") or []}
+             for r in result["recipes"]]
     card = {"type": "recipes", "recipes": [
         {"id": r["id"], "title": r["title"], "minutes": r["minutes"], "difficulty": r["difficulty"],
          "kcal_per_serving": r["kcal_per_serving"], "missing": r["missing"], "uses_expiring": r["uses_expiring"],
-         "summary": r["summary"]} for r in result["recipes"]]}
+         "summary": r["summary"], "fit": r.get("fit") or [], "stripped": r.get("stripped") or []}
+        for r in result["recipes"]]}
     return {"ok": True, "recipes": brief, "dropped": result["dropped"],
             "note_for_reply": "卡片已展示完整做法，回复里每道菜一句话即可，不要重复用料和步骤。"}, [card]
 

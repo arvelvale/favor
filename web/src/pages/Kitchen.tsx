@@ -4,6 +4,7 @@ import { ArrowRight, ChefHat, CircleAlert, Leaf, Loader2, RefreshCw, Refrigerato
 import { api, ApiError, type PantryItem, type RecipeBatch } from '../lib/api'
 import { isExpiring, STORAGE_META, STORAGES } from '../lib/kitchen'
 import { useDataChanged } from '../lib/motion'
+import { usePrefs } from '../lib/prefs'
 import { useAuth } from '../App'
 import { useToast } from '../components/ui'
 import { CatDot, ExpiryPill, PantryAdder, RecipeCard, RecipeSkeletons } from '../components/Kitchen'
@@ -13,6 +14,9 @@ const THINKING = ['正在翻冰箱…', '看看哪些快过期了…', '挑几�
 export default function KitchenPage() {
   const toast = useToast()
   const { llmEnabled } = useAuth()
+  const prefs = usePrefs()
+  // 问卷 Q7 选了「食材总放坏」：快过期的放在首页最前面
+  const wasteFirst = !!prefs?.prefs.goals.includes('waste')
   const [pantry, setPantry] = useState<PantryItem[] | null>(null)
   const [batch, setBatch] = useState<RecipeBatch | null>(null)
   const [note, setNote] = useState('')
@@ -38,7 +42,10 @@ export default function KitchenPage() {
     try {
       const res = await api.post<RecipeBatch>('/api/recipes/recommend', { note: note.trim() })
       setBatch({ ...res, stale: false })
-      if (res.dropped?.length) toast(`已排除 ${res.dropped.length} 道含过敏原的菜`)
+      if (res.dropped?.length) {
+        const why = [...new Set(res.dropped.map(d => d.reason))].slice(0, 2).join('，')
+        toast(`按你的设置去掉了 ${res.dropped.length} 道菜（${why}）`)
+      }
     } catch (e) { setFailed(e instanceof ApiError ? e.message : '这次没想出来，再试一次吧') }
     finally { setThinking(false) }
   }
@@ -68,12 +75,13 @@ export default function KitchenPage() {
 
   return (
     <div className="wb-page">
-      <div className="ov stagger">
+      <div className={`ov stagger ${wasteFirst ? 'waste-first' : ''}`}>
         <section className="card kitchen-hero span-8">
           <div className="hero-copy">
             <span className="hero-kicker"><ChefHat size={14} />今天吃什么</span>
             <h2>{expiring.length ? `有 ${expiring.length} 样快过期了，先用掉它们？` : '冰箱里的东西，够做好几顿了'}</h2>
-            <p>冰箱里有 {pantry.length} 样食材。Favor 会优先推荐现在就能做的菜，顺手用掉快过期的。</p>
+            <p>冰箱里有 {pantry.length} 样食材。Favor 会优先推荐现在就能做的菜，顺手用掉快过期的。
+              {prefs && <>按<Link to="/app/me" className="hero-link">{prefs.servings} 人份{prefs.prefs.minutes ? `、${prefs.prefs.minutes} 分钟内` : ''}</Link>来推荐。</>}</p>
           </div>
           <div className="ask-row">
             <input className="input" value={note} maxLength={100} disabled={thinking}

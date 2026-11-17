@@ -172,6 +172,8 @@ export function RecipeCard({ r, index = 0 }: { r: RecipeBrief; index?: number })
       </div>
       {!ready && <p className="recipe-miss"><CircleAlert size={13} />缺：{r.missing.join('、')}</p>}
       {ready && r.uses_expiring.length > 0 && <p className="recipe-save"><Leaf size={13} />顺手用掉：{r.uses_expiring.join('、')}</p>}
+      {r.fit?.map(f => <p className="recipe-fit" key={f}><Clock size={13} />{f}</p>)}
+      {r.stripped?.length ? <p className="recipe-stripped"><Check size={13} />已去掉你不吃的{r.stripped.join('、')}</p> : null}
     </Link>
   )
 }

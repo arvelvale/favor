@@ -65,6 +65,12 @@ export default function RecipePage() {
                 <span><Users size={15} />{recipe.servings} 人份</span>
                 {recipe.kcal_per_serving ? <span><Flame size={15} />每份约 {recipe.kcal_per_serving} kcal</span> : null}
               </div>
+              {(recipe.fit?.length || recipe.stripped?.length) ? (
+                <div className="recipe-notes">
+                  {recipe.fit?.map(f => <p className="recipe-fit" key={f}><Clock size={13} />{f}</p>)}
+                  {recipe.stripped?.length ? <p className="recipe-stripped"><Check size={13} />按你的设置去掉了{recipe.stripped.join('、')}，步骤里提到的可以跳过</p> : null}
+                </div>
+              ) : null}
             </div>
             <div className="head-actions">
               <button className="btn" onClick={toggleSave}>

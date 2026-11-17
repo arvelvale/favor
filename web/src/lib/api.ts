@@ -1,7 +1,7 @@
 // 与 Flask 后端通信。所有请求带上本地时区偏移，后端据此计算“今天”。
 export type Kind = 'meal' | 'water' | 'exercise' | 'sleep' | 'weight' | 'mood'
 
-export interface User { id: number; username: string; nickname: string }
+export interface User { id: number; username: string; nickname: string; prefs_status?: 'new' | 'done' | 'skipped' }
 
 export interface FoodItem { name: string; amount?: string; calories: number; protein?: number; carbs?: number; fat?: number }
 
@@ -115,6 +115,10 @@ export interface Recipe {
   missing: string[]
   uses_expiring: string[]
   uses_count: number
+  /** 不符合问卷设置的地方（超时、太难、超热量），排序时排后面 */
+  fit?: string[]
+  /** 因忌口/饮食方式去掉的可省略用料 */
+  stripped?: string[]
   saved: boolean
   cooked_count: number
   created_at: string
@@ -136,7 +140,7 @@ export interface CookPreview { recipe: Recipe; usage: CookUsage[]; meal_type: st
 export interface CookResult { title: string; used: { name: string; result: string }[]; record: { id: number; text: string } | null }
 export interface CookLog { id: number; title: string; cooked_at: string; servings: number; recipe_id: number | null; used: { name: string; result: string }[] }
 
-export type RecipeBrief = Pick<Recipe, 'id' | 'title' | 'minutes' | 'difficulty' | 'kcal_per_serving' | 'missing' | 'uses_expiring' | 'summary'>
+export type RecipeBrief = Pick<Recipe, 'id' | 'title' | 'minutes' | 'difficulty' | 'kcal_per_serving' | 'missing' | 'uses_expiring' | 'summary' | 'fit' | 'stripped'>
 
 export type Card =
   | { type: 'record'; action: 'logged' | 'deleted'; kind: Kind; record_id: number; title: string; at: string }

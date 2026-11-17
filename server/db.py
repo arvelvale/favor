@@ -134,6 +134,15 @@ CREATE TABLE IF NOT EXISTS cook_logs (
     used      TEXT    NOT NULL DEFAULT '[]'
 );
 CREATE INDEX IF NOT EXISTS idx_cook_user ON cook_logs(user_id, cooked_at);
+
+-- 问卷结果。没有行 = 还没做过问卷（status 视为 new）；data 只存回答过的字段，其余用默认值
+CREATE TABLE IF NOT EXISTS user_prefs (
+    user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    data       TEXT    NOT NULL DEFAULT '{}',
+    status     TEXT    NOT NULL DEFAULT 'done',
+    skipped    TEXT    NOT NULL DEFAULT '[]',
+    updated_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
 """
 
 

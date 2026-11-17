@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { api, setUnauthorizedHandler, type User } from './lib/api'
+import { clearPrefsCache } from './lib/prefs'
 import Workbench from './components/Workbench'
 import { ToastProvider } from './components/ui'
 import LandingPage from './pages/Landing'
@@ -14,6 +15,8 @@ import ChatPage from './pages/Chat'
 import TrendsPage from './pages/Trends'
 import RecordsPage from './pages/Records'
 import ProfilePage from './pages/Profile'
+import MePage from './pages/Me'
+import WelcomePage from './pages/Welcome'
 
 interface AuthState {
   user: User | null
@@ -40,6 +43,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await api.post('/api/auth/logout').catch(() => undefined)
+    clearPrefsCache()
     setUser(null)
   }, [])
 
@@ -47,9 +51,12 @@ function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={{ user, llmEnabled, setUser, logout }}>{children}</AuthContext.Provider>
 }
 
-function Protected({ children }: { children: ReactNode }) {
+function Protected({ children, questionnaire = false }: { children: ReactNode; questionnaire?: boolean }) {
   const { user } = useAuth()
-  return user ? <>{children}</> : <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/login" replace />
+  // 第一次进来先做问卷（可整体跳过）；做过或跳过之后不再拦
+  if (!questionnaire && user.prefs_status === 'new') return <Navigate to="/welcome" replace />
+  return <>{children}</>
 }
 
 function AuthGate({ mode }: { mode: 'login' | 'register' }) {
@@ -66,6 +73,7 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<AuthGate mode="login" />} />
             <Route path="/register" element={<AuthGate mode="register" />} />
+            <Route path="/welcome" element={<Protected questionnaire><WelcomePage /></Protected>} />
             <Route path="/app" element={<Protected><Workbench /></Protected>}>
               <Route index element={<KitchenPage />} />
               <Route path="fridge" element={<FridgePage />} />
@@ -77,6 +85,7 @@ export default function App() {
               <Route path="trends" element={<TrendsPage />} />
               <Route path="records" element={<RecordsPage />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="me" element={<MePage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

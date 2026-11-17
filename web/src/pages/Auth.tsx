@@ -4,6 +4,7 @@ import { ArrowLeft, ChartNoAxesColumn, MessageCircleHeart, Sprout } from 'lucide
 import Logo from '../components/Logo'
 import { api, ApiError, type User } from '../lib/api'
 import { useAuth } from '../App'
+import { clearPrefsCache } from '../lib/prefs'
 
 const FEATS = [
   { icon: MessageCircleHeart, color: '#ff9a6b', title: '说一句就记好', text: '“午饭一碗牛肉面”——热量和营养自动估算' },
@@ -28,6 +29,7 @@ export default function AuthPage({ initialMode = 'login' }: { initialMode?: 'log
     try {
       const url = mode === 'login' ? '/api/auth/login' : '/api/auth/register'
       const res = await api.post<{ user: User }>(url, { username, password, nickname })
+      clearPrefsCache()
       setUser(res.user)
       navigate('/app', { replace: true })
     } catch (e) {
@@ -50,7 +52,7 @@ export default function AuthPage({ initialMode = 'login' }: { initialMode?: 'log
         <div className="orb a" /><div className="orb b" />
         <div>
           <Link to="/" className="wb-brand" style={{ padding: 0 }}>
-            <Logo size={42} tone="light" subtitle="AI 健康管家" animated />
+            <Logo size={42} tone="light" subtitle="AI 厨房搭子" animated />
           </Link>
           <h1>照顾好自己，<br />从<span className="grad-text">记下今天</span>开始。</h1>
           <p className="lead">Favor 是一位懂营养学的 AI 朋友。你只管像聊天一样告诉它，记录、分析和建议交给它。</p>
@@ -69,7 +71,7 @@ export default function AuthPage({ initialMode = 'login' }: { initialMode?: 'log
         <Link to="/" className="btn btn-ghost btn-sm auth-back"><ArrowLeft size={15} />返回首页</Link>
         <form className="auth-form" onSubmit={submit} key={mode}>
           <h2>{mode === 'login' ? '欢迎回来' : '创建账号'}</h2>
-          <p className="sub">{mode === 'login' ? '登录后继续你的健康记录' : '只需要一个用户名和密码'}</p>
+          <p className="sub">{mode === 'login' ? '登录后看看今天吃什么' : '只需要一个用户名和密码'}</p>
           <div className="stack">
             <label className="field"><span>用户名</span>
               <input className="input" autoComplete="username" value={username} required
