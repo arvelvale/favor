@@ -10,6 +10,7 @@ import { usePrefs } from '../lib/prefs'
 import ChatView, { type AskRequest } from './ChatView'
 import Logo, { LogoMark } from './Logo'
 import RecordModal from './RecordModal'
+import Tour from './Tour'
 
 // 主导航围绕「冰箱 → 做菜」。健康默认是次要入口（在「我的」旁边）；
 // 问卷里选了「想吃得健康」的用户，健康进主导航（手机底栏里替换「对话」，对话仍可从右下角按钮进入）
@@ -192,6 +193,8 @@ export default function Workbench() {
         {healthMain && <NavLink to="/app/health" className={inHealth ? 'active' : ''}><HeartPulse size={21} strokeWidth={1.8} />健康</NavLink>}
         <NavLink to="/app/me" className={!healthMain && inHealth ? 'active' : ''}><UserRound size={21} strokeWidth={1.8} />我的</NavLink>
       </nav>
+
+      <Tour />
 
       {recording && <RecordModal onClose={() => setRecording(false)} onSaved={() => emitDataChanged()} />}
     </div>

@@ -7,6 +7,7 @@ import {
 import { api, ApiError, type CookPreview, type CookResult, type Recipe } from '../lib/api'
 import { DIFFICULTY, formatQty, MEAL_SLOTS } from '../lib/kitchen'
 import { emitDataChanged } from '../lib/motion'
+import { updateOnboarding, useOnboarding } from '../lib/onboarding'
 import { useToast } from '../components/ui'
 
 export default function RecipePage() {
@@ -25,11 +26,17 @@ export default function RecipePage() {
   }, [id, toast])
   useEffect(load, [load])
 
+  // 新手引导第 2 步「打开一道菜」：打开过就记下（服务端推导不出来）
+  const ob = useOnboarding()
+  const openedMarked = !!ob?.steps.open
+  useEffect(() => { if (recipe && ob && !openedMarked) updateOnboarding({ opened_recipe: true }) }, [recipe, ob, openedMarked])
+
   async function toggleSave() {
     if (!recipe) return
     try {
       await api.post(`/api/recipes/${recipe.id}/save`, { saved: !recipe.saved })
       setRecipe({ ...recipe, saved: !recipe.saved })
+      emitDataChanged()
       toast(recipe.saved ? '已取消收藏' : '收藏好了，在「收藏」里能找到')
     } catch (e) { toast(e instanceof ApiError ? e.message : '操作失败') }
   }
@@ -72,7 +79,7 @@ export default function RecipePage() {
                 </div>
               ) : null}
             </div>
-            <div className="head-actions">
+            <div className="head-actions" data-tour="cook-actions">
               <button className="btn" onClick={toggleSave}>
                 {recipe.saved ? <><BookmarkCheck size={16} color="var(--brand)" />已收藏</> : <><Bookmark size={16} />收藏</>}
               </button>

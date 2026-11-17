@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, ChefHat, CircleAlert, Leaf, Loader2, RefreshCw, Refrigerator, Sparkles } from 'lucide-react'
 import { api, ApiError, type PantryItem, type RecipeBatch } from '../lib/api'
 import { isExpiring, STORAGE_META, STORAGES } from '../lib/kitchen'
-import { useDataChanged } from '../lib/motion'
+import { emitDataChanged, useDataChanged } from '../lib/motion'
+import { OnboardingChecklist, TipBanner } from '../components/Onboarding'
 import { usePrefs } from '../lib/prefs'
 import { useAuth } from '../App'
 import { useToast } from '../components/ui'
@@ -42,6 +43,7 @@ export default function KitchenPage() {
     try {
       const res = await api.post<RecipeBatch>('/api/recipes/recommend', { note: note.trim() })
       setBatch({ ...res, stale: false })
+      emitDataChanged()  // 引导进度、上手清单跟着刷新
       if (res.dropped?.length) {
         const why = [...new Set(res.dropped.map(d => d.reason))].slice(0, 2).join('，')
         toast(`按你的设置去掉了 ${res.dropped.length} 道菜（${why}）`)
@@ -67,8 +69,9 @@ export default function KitchenPage() {
             <h2>先告诉 Favor，冰箱里有什么</h2>
             <p>选几样常见的，或者直接说一句话。不用填数量，也不用记保质期。</p>
           </div>
-          <PantryAdder existing={pantry} onAdded={load} />
+          <div data-tour="pantry"><PantryAdder existing={pantry} onAdded={load} /></div>
         </section>
+        <div className="ov" style={{ marginTop: 18 }}><TipBanner page="home" /><OnboardingChecklist /></div>
       </div>
     )
   }
@@ -76,6 +79,8 @@ export default function KitchenPage() {
   return (
     <div className="wb-page">
       <div className={`ov stagger ${wasteFirst ? 'waste-first' : ''}`}>
+        <TipBanner page="home" />
+        <OnboardingChecklist />
         <section className="card kitchen-hero span-8">
           <div className="hero-copy">
             <span className="hero-kicker"><ChefHat size={14} />今天吃什么</span>
@@ -87,7 +92,7 @@ export default function KitchenPage() {
             <input className="input" value={note} maxLength={100} disabled={thinking}
               placeholder="有什么要求？比如：想吃辣的、两个人吃、15 分钟内"
               onChange={e => setNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && !thinking && llmEnabled && recommend()} />
-            <button className="btn btn-primary btn-lg" onClick={recommend} disabled={thinking || !llmEnabled}>
+            <button className="btn btn-primary btn-lg" data-tour="recommend" onClick={recommend} disabled={thinking || !llmEnabled}>
               {thinking ? <Loader2 size={17} className="spin" /> : hasRecipes ? <RefreshCw size={17} /> : <Sparkles size={17} />}
               {thinking ? THINKING[tick % THINKING.length] : hasRecipes ? '换一批' : '帮我想想'}
             </button>
@@ -124,7 +129,7 @@ export default function KitchenPage() {
             {hasRecipes && !thinking && <span className="muted">点开看用料和步骤，做完点「做好了」会自动更新冰箱</span>}
           </div>
           {thinking ? <RecipeSkeletons /> : hasRecipes ? (
-            <div className="recipe-grid">{batch!.recipes.map((r, i) => <RecipeCard key={r.id} r={r} index={i} />)}</div>
+            <div className="recipe-grid">{batch!.recipes.map((r, i) => <RecipeCard key={r.id} r={r} index={i} tour={i === 0 ? 'first-recipe' : undefined} />)}</div>
           ) : (
             <div className="card empty-recipes">
               <ChefHat size={36} />
@@ -135,7 +140,7 @@ export default function KitchenPage() {
 
         <section className="card span-12 quick-add">
           <div className="card-title"><h2><Refrigerator size={16} />顺手补几样</h2><Link to="/app/fridge" className="hint">管理冰箱 <ArrowRight size={12} style={{ verticalAlign: -1 }} /></Link></div>
-          <PantryAdder existing={pantry} onAdded={load} />
+          <div data-tour="pantry"><PantryAdder existing={pantry} onAdded={load} /></div>
         </section>
       </div>
     </div>

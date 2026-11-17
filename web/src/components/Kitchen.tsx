@@ -153,10 +153,10 @@ export function PantryAdder({ existing, onAdded, autoFocus = false }: {
 }
 
 // ---------------------------------------------------------- 菜谱卡片
-export function RecipeCard({ r, index = 0 }: { r: RecipeBrief; index?: number }) {
+export function RecipeCard({ r, index = 0, tour }: { r: RecipeBrief; index?: number; tour?: string }) {
   const ready = r.missing.length === 0
   return (
-    <Link to={`/app/recipe/${r.id}`} className="card lift recipe-card" style={{ '--i': index } as CSSProperties}>
+    <Link to={`/app/recipe/${r.id}`} className="card lift recipe-card" data-tour={tour} style={{ '--i': index } as CSSProperties}>
       <div className="recipe-top">
         <span className={`ready-tag ${ready ? 'ok' : 'miss'}`}>
           {ready ? <><Check size={12} strokeWidth={3} />现在就能做</> : <><ShoppingBasket size={12} />还缺 {r.missing.length} 样</>}

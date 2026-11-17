@@ -6,6 +6,7 @@ import { CATEGORY_META, formatQty, isExpiring, STORAGE_META, STORAGES } from '..
 import { emitDataChanged, useDataChanged } from '../lib/motion'
 import { Modal, useToast } from '../components/ui'
 import { CatDot, ExpiryPill, PantryAdder } from '../components/Kitchen'
+import { TipBanner } from '../components/Onboarding'
 
 export default function FridgePage() {
   const toast = useToast()
@@ -39,6 +40,7 @@ export default function FridgePage() {
 
   return (
     <div className="wb-page">
+      <div className="ov fridge-tip"><TipBanner page="fridge" /></div>
       <div className="toolbar">
         <div className="segmented">
           <button className={filter === 'all' ? 'on' : ''} onClick={() => setFilter('all')}>全部 {items.length}</button>
@@ -57,7 +59,7 @@ export default function FridgePage() {
       </div>
 
       {adding && (
-        <section className="card adder-card">
+        <section className="card adder-card" data-tour="pantry">
           <PantryAdder existing={items} autoFocus onAdded={load} />
         </section>
       )}
