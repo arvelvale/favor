@@ -1,14 +1,14 @@
-"""中文分词：优先使用 jieba，未安装时回退到纯标准库的「单字 + 双字」切分。
+"""中文分词：固定使用纯标准库的「单字 + 双字」切分。
 
-回退方案对中文检索够用：查询「菠菜补铁」与语料「非血红素铁」可通过单字「铁」命中，
+对中文检索够用：查询「菠菜补铁」与语料「非血红素铁」可通过单字「铁」命中，
 双字则让「菠菜」「补铁」这类词整体匹配，减少噪声。
+
+为什么不自动启用 jieba：BM25 分数的量级取决于分词方式（同一题内置分词约 14 分，
+jieba 约 5 分），而拒答门槛 RAG_MIN_ABS_SCORE=10.0 是按内置分词评测出来的。
+若「装了就用」，服务器上碰巧装了 jieba 就会让正常问题被判为无依据（Recall@4 100%→62%）。
+要换分词器，必须同时用 python -m rag.evaluate 重新标定门槛，并改这里的实现。
 """
 import re
-
-try:
-    import jieba as _jieba
-except ImportError:
-    _jieba = None
 
 _CJK_RUN = re.compile(r"[\u4e00-\u9fff]+")
 _ASCII_WORD = re.compile(r"[a-z0-9]+", re.I)
@@ -39,12 +39,8 @@ def tokenize(text):
     text = (text or "").lower()
     if not text:
         return []
-    if _jieba is not None:
-        raw = _jieba.cut_for_search(text)
-    else:
-        raw = _fallback_tokens(text)
-    return [t for t in raw if t and t.strip() and t not in _STOPWORDS]
+    return [t for t in _fallback_tokens(text) if t and t.strip() and t not in _STOPWORDS]
 
 
 def engine_name():
-    return "jieba" if _jieba is not None else "builtin-unigram+bigram"
+    return "builtin-unigram+bigram"

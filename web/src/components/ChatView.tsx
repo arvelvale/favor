@@ -20,7 +20,10 @@ function prepareMarkdown(text: string): string {
     .replace(/\[(\d{1,2})\](?!\()/g, '[$1](#cite-$1)')  // [1] -> [1](#cite-1)
 }
 
-/** markdown 渲染器：citation 角标点击后滚动到对应出处；其余链接新标签页打开。 */
+/**
+ * markdown 渲染器：citation 角标点击后滚动到对应出处；其余链接新标签页打开。
+ * 出处只在「本条消息」内查找：每条回答的编号都从 [1] 开始，用全页 id 会跳到第一条回答的出处。
+ */
 const mdComponents: Components = {
   a({ href, children, node, ...rest }) {
     void node  // react-markdown 注入的 AST 节点，不要展开到原生 <a> 上
@@ -29,7 +32,7 @@ const mdComponents: Components = {
       return (
         <a className="citation-chip" href={href} title="查看出处" onClick={e => {
           e.preventDefault()
-          const el = document.getElementById(`cite-${hit[1]}`)
+          const el = e.currentTarget.closest('.msg')?.querySelector<HTMLElement>(`[data-cite="${hit[1]}"]`)
           if (!el) return
           el.scrollIntoView({ behavior: 'smooth', block: 'center' })
           el.classList.add('cite-flash')
@@ -295,7 +298,7 @@ function SourcesCard({ card }: { card: Extract<Card, { type: 'sources' }> }) {
       )}
       <ol className="sources-list">
         {card.sources.map(s => (
-          <li className="source-item" id={`cite-${s.citation}`} key={s.citation}>
+          <li className="source-item" data-cite={s.citation} key={s.citation}>
             <span className="source-num">{s.citation}</span>
             <div className="source-body">
               <a className="source-title" href={s.url} target="_blank" rel="noreferrer">{s.title}<ExternalLink size={12} /></a>

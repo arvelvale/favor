@@ -73,6 +73,25 @@ class RetrievalTests(unittest.TestCase):
         self.assertIn("番茄", expanded)
         self.assertIn("鸡蛋", expanded)
 
+    def test_tokenizer_ignores_installed_jieba(self):
+        """门槛 10.0 按内置分词标定；即使环境里装了 jieba，分词结果也不能变。"""
+        import importlib
+        from rag import tokenizer as tok
+        before = tok.tokenize("每天应该吃多少蔬菜")
+        fake = NS(cut_for_search=lambda text: ["每天", "蔬菜"])
+        saved = sys.modules.get("jieba")
+        sys.modules["jieba"] = fake
+        try:
+            importlib.reload(tok)
+            self.assertEqual(tok.engine_name(), "builtin-unigram+bigram")
+            self.assertEqual(tok.tokenize("每天应该吃多少蔬菜"), before)
+        finally:
+            if saved is None:
+                sys.modules.pop("jieba", None)
+            else:
+                sys.modules["jieba"] = saved
+            importlib.reload(tok)
+
 
 class PromptSafetyTests(unittest.TestCase):
     def test_no_evidence_context_forbids_numbers(self):
@@ -141,6 +160,20 @@ class ToolIntegrationTests(unittest.TestCase):
         self.assertEqual(result["citation_numbers"], [1, 2, 3, 4][:result["hit_count"]])
         self.assertEqual(cards[0]["type"], "sources")
         self.assertIn("[1]", result["reference_material"])
+
+    def test_second_search_in_same_turn_continues_numbering(self):
+        """同一轮查两次资料，编号要接着排，否则两批 [1] 指向不同出处、自检也会混淆。"""
+        from agent import tools
+        ctx = tools.ToolContext(conn=NS(commit=lambda: None, rollback=lambda: None),
+                                user_id=1, now=datetime.now())
+        first, _ = tools.execute(ctx, "search_nutrition", json.dumps({"query": "每天吃多少蔬菜"}))
+        second, cards = tools.execute(ctx, "search_nutrition", json.dumps({"query": "成年人每天食盐不超过多少"}))
+        n1, n2 = first["citation_numbers"], second["citation_numbers"]
+        self.assertTrue(n1 and n2)
+        self.assertEqual(n2, list(range(len(n1) + 1, len(n1) + len(n2) + 1)))
+        self.assertEqual([s["citation"] for s in cards[0]["sources"]], n2)
+        self.assertIn(f"[{n2[0]}]", second["reference_material"])
+        self.assertNotIn("[1] ", second["reference_material"])
 
     def test_tool_no_evidence_card(self):
         from agent import tools
