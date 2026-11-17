@@ -11,6 +11,7 @@ from flask import Flask, Response, g, jsonify, request, send_from_directory, ses
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import health
+import kitchen
 from agent import runner
 from config import Settings, logger
 from rag import retriever as rag_retriever
@@ -334,13 +335,133 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
             conn = connect(settings.database_path)
             try:
                 for event in runner.run_turn(conn, client, settings.llm_model, user_id, conversation_id, text, now,
-                                                images=image_service):
+                                                images=image_service, recipe_limit=settings.recipe_daily_limit):
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
             finally:
                 conn.close()
 
         return Response(stream_with_context(stream()), mimetype="text/event-stream",
                         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+    # ------------------------------------------------------------ 冰箱库存
+
+    @app.get("/api/pantry")
+    @login_required
+    def pantry():
+        return jsonify({"items": kitchen.list_pantry(get_db(), g.user["id"], local_now().date())})
+
+    @app.get("/api/pantry/catalog")
+    @login_required
+    def pantry_catalog():
+        return jsonify({"groups": kitchen.catalog(), "categories": kitchen.CATEGORIES, "storages": kitchen.STORAGES})
+
+    @app.post("/api/pantry")
+    @login_required
+    def add_pantry():
+        conn = get_db()
+        items = kitchen.add_items(conn, g.user["id"], body().get("items"), local_now().date(),
+                                  source=str(body().get("source") or "manual")[:10])
+        conn.commit()
+        return jsonify({"items": items}), 201
+
+    @app.post("/api/pantry/parse")
+    @login_required
+    def parse_pantry():
+        """一句话录入：只解析不入库，前端让用户确认后再 POST /api/pantry。"""
+        items = kitchen.parse_text(get_llm(), settings.llm_model if settings.llm_enabled else None,
+                                   body().get("text"))
+        today = local_now().date()
+        preview = []
+        for raw in items:
+            try:
+                clean = kitchen._clean_item(raw, today)
+            except ValidationError:
+                continue
+            preview.append(clean | {"days_left": kitchen._days_left(clean["expires_on"], today),
+                                    "category_label": kitchen.CATEGORIES[clean["category"]],
+                                    "storage_label": kitchen.STORAGES[clean["storage"]]})
+        return jsonify({"items": preview})
+
+    @app.patch("/api/pantry/<int:item_id>")
+    @login_required
+    def patch_pantry(item_id):
+        conn = get_db()
+        item = kitchen.update_item(conn, g.user["id"], item_id, body(), local_now().date())
+        if item is None:
+            return error("食材不存在", 404)
+        conn.commit()
+        return jsonify({"item": item})
+
+    @app.post("/api/pantry/<int:item_id>/remove")
+    @login_required
+    def remove_pantry(item_id):
+        conn = get_db()
+        if not kitchen.remove_item(conn, g.user["id"], item_id, str(body().get("reason") or "used")):
+            return error("食材不存在", 404)
+        conn.commit()
+        return jsonify({"ok": True})
+
+    # ------------------------------------------------------------ 菜谱
+
+    @app.post("/api/recipes/recommend")
+    @login_required
+    def recommend_recipes():
+        conn = get_db()
+        try:
+            result = kitchen.recommend(conn, get_llm(), settings.llm_model if settings.llm_enabled else None,
+                                       g.user["id"], local_now(), str(body().get("note") or ""),
+                                       settings.recipe_daily_limit)
+        except ValidationError:
+            raise
+        except Exception as exc:  # noqa: BLE001 —— 模型超时、返回非 JSON 等，给用户可读的提示
+            logger.warning("recommend failed: %s", type(exc).__name__)
+            return error("这次没想出来，稍后再试一次吧", 502)
+        conn.commit()
+        return jsonify(result)
+
+    @app.get("/api/recipes/latest")
+    @login_required
+    def latest_recipes():
+        return jsonify(kitchen.latest_batch(get_db(), g.user["id"], local_now().date()))
+
+    @app.get("/api/recipes")
+    @login_required
+    def saved_recipes():
+        return jsonify(kitchen.list_saved(get_db(), g.user["id"], local_now().date()))
+
+    @app.get("/api/recipes/<int:recipe_id>")
+    @login_required
+    def recipe_detail(recipe_id):
+        recipe = kitchen.recipe_payload(get_db(), g.user["id"], recipe_id, local_now().date())
+        return jsonify({"recipe": recipe}) if recipe else error("菜谱不存在", 404)
+
+    @app.post("/api/recipes/<int:recipe_id>/save")
+    @login_required
+    def save_recipe(recipe_id):
+        conn = get_db()
+        if not kitchen.set_saved(conn, g.user["id"], recipe_id, bool(body().get("saved", True))):
+            return error("菜谱不存在", 404)
+        conn.commit()
+        return jsonify({"ok": True})
+
+    @app.get("/api/recipes/<int:recipe_id>/cook")
+    @login_required
+    def cook_preview(recipe_id):
+        preview = kitchen.cook_preview(get_db(), g.user["id"], recipe_id, local_now())
+        return jsonify(preview) if preview else error("菜谱不存在", 404)
+
+    @app.post("/api/recipes/<int:recipe_id>/cook")
+    @login_required
+    def cook_recipe(recipe_id):
+        conn = get_db()
+        data = body()
+        result = kitchen.cook(conn, g.user["id"], recipe_id, local_now(), data.get("usage") or [],
+                              data.get("eaten_servings", 1), data.get("meal_type"),
+                              log_meal=bool(data.get("log_meal", True)))
+        if result is None:
+            return error("菜谱不存在", 404)
+        conn.commit()
+        return jsonify(result)
 
     # ------------------------------------------------------------ 菜品配图
 

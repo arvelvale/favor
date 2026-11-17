@@ -90,6 +90,50 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, id);
+
+-- 冰箱库存。数量可选（用户不一定愿意填）；到期日缺省时按分类估算，expires_estimated=1 表示估算值。
+-- status: active 在用 / used 用完 / discarded 扔掉（软删除，留着做之后的口味与浪费统计）
+CREATE TABLE IF NOT EXISTS pantry_items (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id           INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name              TEXT    NOT NULL,
+    category          TEXT    NOT NULL DEFAULT 'other',
+    quantity          REAL,
+    unit              TEXT    NOT NULL DEFAULT '',
+    storage           TEXT    NOT NULL DEFAULT 'fridge',
+    expires_on        TEXT,
+    expires_estimated INTEGER NOT NULL DEFAULT 1,
+    status            TEXT    NOT NULL DEFAULT 'active',
+    source            TEXT    NOT NULL DEFAULT 'manual',
+    added_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at        TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_pantry_user ON pantry_items(user_id, status);
+
+-- AI 生成的菜谱。同一次推荐的几道菜共用 batch；saved=1 表示收藏。data 为菜谱 JSON。
+CREATE TABLE IF NOT EXISTS recipes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    batch      TEXT    NOT NULL,
+    title      TEXT    NOT NULL,
+    data       TEXT    NOT NULL,
+    saved      INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_recipes_user ON recipes(user_id, id);
+
+-- 做菜记录：做了哪道、吃了几份、扣了哪些库存、对应哪条饮食记录
+CREATE TABLE IF NOT EXISTS cook_logs (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipe_id INTEGER REFERENCES recipes(id) ON DELETE SET NULL,
+    title     TEXT    NOT NULL,
+    cooked_at TEXT    NOT NULL,
+    servings  REAL    NOT NULL DEFAULT 1,
+    record_id INTEGER,
+    used      TEXT    NOT NULL DEFAULT '[]'
+);
+CREATE INDEX IF NOT EXISTS idx_cook_user ON cook_logs(user_id, cooked_at);
 """
 
 

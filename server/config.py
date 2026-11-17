@@ -40,6 +40,8 @@ class Settings:
         self.image_model = os.getenv("IMAGE_MODEL", "z-image-turbo").strip()
         self.image_size = os.getenv("IMAGE_SIZE", "1024*1024").strip()
         self.image_daily_limit = int(os.getenv("IMAGE_DAILY_LIMIT", "10"))
+        # 每人每天最多推荐几批菜谱（每批一次模型调用），控制费用
+        self.recipe_daily_limit = max(1, int(os.getenv("RECIPE_DAILY_LIMIT") or "20"))
 
         # 知识库 RAG：开关与检索阈值。留空时用 or 兜底默认值（getenv 第二参数对空串无效）。
         self.rag_enabled = (os.getenv("RAG_ENABLED") or "true").strip().lower() in ("1", "true", "yes", "on")

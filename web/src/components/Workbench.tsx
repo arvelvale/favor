@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  ChartNoAxesColumn, ExternalLink, LayoutDashboard, ListChecks, LogOut, MessageCircleHeart, MessageSquarePlus,
-  PanelLeftClose, PanelLeftOpen, PanelRightClose, Plus, UserRound, X,
+  Bookmark, ChefHat, ExternalLink, HeartPulse, LogOut, MessageCircleHeart, MessageSquarePlus,
+  PanelLeftClose, PanelLeftOpen, PanelRightClose, Plus, Refrigerator, X,
 } from 'lucide-react'
 import { useAuth } from '../App'
 import { emitDataChanged } from '../lib/motion'
@@ -10,20 +10,26 @@ import ChatView, { type AskRequest } from './ChatView'
 import Logo, { LogoMark } from './Logo'
 import RecordModal from './RecordModal'
 
+// 主导航围绕「冰箱 → 做菜」；健康降为次要入口（一个入口，进去再分总览/趋势/记录/档案）
 const NAV = [
-  { to: '/app', label: '总览', icon: LayoutDashboard, end: true },
-  { to: '/app/chat', label: '对话', icon: MessageCircleHeart },
-  { to: '/app/trends', label: '趋势', icon: ChartNoAxesColumn },
-  { to: '/app/records', label: '记录', icon: ListChecks },
-  { to: '/app/profile', label: '档案', icon: UserRound },
+  { to: '/app', label: '今天吃什么', short: '今天', icon: ChefHat, end: true },
+  { to: '/app/fridge', label: '冰箱', short: '冰箱', icon: Refrigerator },
+  { to: '/app/recipes', label: '收藏', short: '收藏', icon: Bookmark },
+  { to: '/app/chat', label: '对话', short: '对话', icon: MessageCircleHeart },
 ]
+const HEALTH_ROUTES = ['/app/health', '/app/trends', '/app/records', '/app/profile']
+const HEALTH_TABS: [string, string][] = [['/app/health', '总览'], ['/app/trends', '趋势'], ['/app/records', '记录'], ['/app/profile', '档案']]
 
 const TITLES: Record<string, [string, string]> = {
-  '/app': ['总览', ''],
-  '/app/chat': ['对话', '和 Favor 聊聊你的一天'],
-  '/app/trends': ['趋势', '看看最近的变化'],
-  '/app/records': ['记录', '你和 Favor 记下的每一条'],
-  '/app/profile': ['健康档案', '用来计算每日目标，也让建议更贴合你'],
+  '/app': ['今天吃什么', ''],
+  '/app/fridge': ['冰箱', '有什么、放在哪、还能放几天'],
+  '/app/recipes': ['收藏', '喜欢的菜和做过的菜'],
+  '/app/recipe': ['菜谱', '按步骤来，做完点「做好了」'],
+  '/app/chat': ['对话', '冰箱、做菜、饮食，都可以问 Favor'],
+  '/app/health': ['健康', '做完菜会自动记一餐，这里看看整体情况'],
+  '/app/trends': ['健康 · 趋势', '看看最近的变化'],
+  '/app/records': ['健康 · 记录', '你和 Favor 记下的每一条'],
+  '/app/profile': ['健康 · 档案', '过敏和饮食偏好也会用在菜谱推荐里'],
 }
 
 // 本机偏好（侧栏折叠、停靠栏开关、停靠栏当前对话）：读写失败时退回默认值
@@ -48,6 +54,8 @@ function greeting() {
 export default function Workbench() {
   const { user, logout } = useAuth()
   const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const inHealth = HEALTH_ROUTES.some(r => pathname === r || pathname.startsWith(r + '/'))
   const wide = () => window.innerWidth > 1280
   const [collapsed, setCollapsed] = useState(store.get('favor.side') === 'collapsed')
   const [dockOpen, setDockOpen] = useState(() => wide() && store.get('favor.dock') !== 'closed')
@@ -86,9 +94,9 @@ export default function Workbench() {
     <div className={`wb ${collapsed ? 'collapsed' : ''}`}>
       <aside className="wb-side">
         <Link to="/" className="wb-brand" title="返回首页">
-          <Logo size={38} tone="light" subtitle="AI 健康管家" animated />
+          <Logo size={38} tone="light" subtitle="AI 厨房搭子" animated />
         </Link>
-        <div className="wb-label">工作台</div>
+        <div className="wb-label">厨房</div>
         <nav className="wb-nav">
           {NAV.map(({ to, label, icon: Icon, end }) => (
             <NavLink key={to} to={to} end={end} title={label}>
@@ -96,6 +104,12 @@ export default function Workbench() {
               {to === '/app/chat' && <span className="badge">AI</span>}
             </NavLink>
           ))}
+        </nav>
+        <div className="wb-label">更多</div>
+        <nav className="wb-nav secondary">
+          <NavLink to="/app/health" title="健康" className={inHealth ? 'active' : ''}>
+            <HeartPulse size={18} strokeWidth={1.9} /><span>健康</span>
+          </NavLink>
         </nav>
         <div className="wb-side-foot">
           <div className="wb-user">
@@ -116,8 +130,13 @@ export default function Workbench() {
             <p>{key === '/app' ? today : subtitle}</p>
           </div>
           <div className="tools">
-            <button className="btn btn-primary hide-sm" onClick={() => setRecording(true)}><Plus size={16} />记一笔</button>
-            <button className="icon-btn mobile-only" aria-label="记一笔" onClick={() => setRecording(true)}><Plus size={19} /></button>
+            {inHealth ? <>
+              <button className="btn btn-primary hide-sm" onClick={() => setRecording(true)}><Plus size={16} />记一笔</button>
+              <button className="icon-btn mobile-only" aria-label="记一笔" onClick={() => setRecording(true)}><Plus size={19} /></button>
+            </> : <>
+              <button className="btn btn-primary hide-sm" onClick={() => navigate('/app/fridge?add=1')}><Plus size={16} />加食材</button>
+              <button className="icon-btn mobile-only" aria-label="加食材" onClick={() => navigate('/app/fridge?add=1')}><Plus size={19} /></button>
+            </>}
             {!onChatPage && (
               <button className={`btn ${showDock ? 'btn-ghost' : ''} dock-toggle hide-sm`} onClick={() => toggleDock(!dockOpen)}>
                 {showDock ? <PanelRightClose size={16} /> : <MessageCircleHeart size={16} />}
@@ -128,6 +147,11 @@ export default function Workbench() {
           </div>
         </header>
         <div className="wb-content">
+          {inHealth && (
+            <nav className="sub-tabs" aria-label="健康">
+              {HEALTH_TABS.map(([to, label]) => <NavLink key={to} to={to} end>{label}</NavLink>)}
+            </nav>
+          )}
           <Outlet />
         </div>
       </div>
@@ -137,7 +161,7 @@ export default function Workbench() {
         <aside className="wb-dock" aria-label="Favor 助手">
           <div className="dock-head">
             <LogoMark size={34} animated />
-            <div className="grow"><b>Favor</b><span><span className="live-dot" />在线 · 说一句就能记录</span></div>
+            <div className="grow"><b>Favor</b><span><span className="live-dot" />在线 · 问问今天吃什么</span></div>
             <button className="icon-btn" title="新对话" aria-label="新对话" onClick={newDockChat}><MessageSquarePlus size={17} /></button>
             {dockConv && <Link className="icon-btn" title="在对话页打开" aria-label="在对话页打开" to={`/app/chat/${dockConv}`}><ExternalLink size={16} /></Link>}
             <button className="icon-btn" title="收起" aria-label="收起" onClick={() => toggleDock(false)}><X size={17} /></button>
@@ -153,9 +177,10 @@ export default function Workbench() {
       )}
 
       <nav className="tabbar">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
-          <NavLink key={to} to={to} end={end}><Icon size={21} strokeWidth={1.8} />{label}</NavLink>
+        {NAV.map(({ to, short, icon: Icon, end }) => (
+          <NavLink key={to} to={to} end={end}><Icon size={21} strokeWidth={1.8} />{short}</NavLink>
         ))}
+        <NavLink to="/app/health" className={inHealth ? 'active' : ''}><HeartPulse size={21} strokeWidth={1.8} />健康</NavLink>
       </nav>
 
       {recording && <RecordModal onClose={() => setRecording(false)} onSaved={() => emitDataChanged()} />}

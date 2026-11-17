@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
 import health
+import kitchen
 from health import ValidationError
 from rag import prompts as rag_prompts
 from rag import retriever as rag_retriever
@@ -20,6 +21,9 @@ class ToolContext:
     images: object = None      # ImageService；未配置生图时为 None，生图工具对模型不可见
     images_this_turn: int = 0  # 每轮对话最多生成 1 张，控制费用
     citations_this_turn: int = 0  # 本轮已发出的资料编号数，多次检索时编号接着排
+    llm: object = None         # 推荐菜谱时再调一次模型（非流式 JSON）
+    model: str | None = None
+    recipe_limit: int = 20
 
     @property
     def today(self) -> date:
@@ -290,6 +294,74 @@ def search_nutrition(ctx, args):
     }
     cards = [{"type": "sources", **payload}]
     return result, cards
+
+
+# ---------------------------------------------------------------- 冰箱与菜谱
+
+PANTRY_ITEM = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string", "description": "食材通用名，如 番茄、鸡蛋、五花肉"},
+        "quantity": {"type": "number", "description": "数量，用户没说就省略"},
+        "unit": {"type": "string", "description": "单位，如 个、斤、g、盒"},
+        "storage": {"type": "string", "enum": list(kitchen.STORAGES), "description": "冷藏/冷冻/常温，没说就省略"},
+        "expires_on": {"type": "string", "description": "到期日 YYYY-MM-DD，用户明确说了才填"},
+    },
+    "required": ["name"],
+}
+
+
+def _pantry_brief(items: list[dict]) -> list[str]:
+    return [kitchen.describe_item(i) + f" · {i['storage_label']}" for i in items]
+
+
+@tool("list_pantry", "查看用户冰箱里现在有哪些食材（按到期从近到远），含剩余天数。", {})
+def list_pantry(ctx, args):
+    items = kitchen.list_pantry(ctx.conn, ctx.user_id, ctx.today)
+    return {"ok": True, "count": len(items), "items": _pantry_brief(items)}, []
+
+
+@tool("add_pantry_items", "把用户买了、冰箱里有的食材加进库存。数量不知道就不填，到期日不知道就不填（系统会按常识估算）。",
+      {"items": {"type": "array", "items": PANTRY_ITEM}}, ["items"])
+def add_pantry_items(ctx, args):
+    items = kitchen.add_items(ctx.conn, ctx.user_id, args.get("items"), ctx.today, source="agent")
+    return ({"ok": True, "saved": _pantry_brief(items)},
+            [{"type": "pantry", "action": "added", "names": [i["name"] for i in items]}])
+
+
+@tool("remove_pantry_items", "用户说某些食材吃完了、用完了或扔掉了时，从库存里移除。",
+      {"names": {"type": "array", "items": {"type": "string"}},
+       "reason": {"type": "string", "enum": ["used", "discarded"], "description": "used 用完了 / discarded 扔掉了"}},
+      ["names"])
+def remove_pantry_items(ctx, args):
+    reason = args.get("reason") or "used"
+    pantry = kitchen.list_pantry(ctx.conn, ctx.user_id, ctx.today)
+    removed, not_found = [], []
+    for name in args.get("names") or []:
+        hit = next((p for p in pantry if kitchen.names_match(str(name), p["name"]) and p["name"] not in removed), None)
+        if hit and kitchen.remove_item(ctx.conn, ctx.user_id, hit["id"], reason):
+            removed.append(hit["name"])
+        else:
+            not_found.append(str(name))
+    cards = [{"type": "pantry", "action": "removed", "names": removed}] if removed else []
+    return {"ok": True, "removed": removed, "not_found": not_found}, cards
+
+
+@tool("recommend_recipes",
+      "根据冰箱现有食材推荐 3 道今天能做的菜（优先现在就能做、用掉快过期的）。用户问「吃什么」「冰箱里这些能做什么」时调用。"
+      "结果会以卡片展示给用户，卡片里有完整用料和步骤。",
+      {"note": {"type": "string", "description": "用户的额外要求，如 想吃辣的、两个人吃、15 分钟内"}})
+def recommend_recipes(ctx, args):
+    result = kitchen.recommend(ctx.conn, ctx.llm, ctx.model, ctx.user_id, ctx.now,
+                               str(args.get("note") or ""), ctx.recipe_limit)
+    brief = [{"title": r["title"], "minutes": r["minutes"], "summary": r["summary"],
+              "missing": r["missing"], "uses_expiring": r["uses_expiring"]} for r in result["recipes"]]
+    card = {"type": "recipes", "recipes": [
+        {"id": r["id"], "title": r["title"], "minutes": r["minutes"], "difficulty": r["difficulty"],
+         "kcal_per_serving": r["kcal_per_serving"], "missing": r["missing"], "uses_expiring": r["uses_expiring"],
+         "summary": r["summary"]} for r in result["recipes"]]}
+    return {"ok": True, "recipes": brief, "dropped": result["dropped"],
+            "note_for_reply": "卡片已展示完整做法，回复里每道菜一句话即可，不要重复用料和步骤。"}, [card]
 
 
 def execute(ctx: ToolContext, name: str, raw_args: str):
