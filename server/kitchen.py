@@ -11,6 +11,7 @@ import uuid
 from datetime import date, datetime, timedelta
 
 import health
+import prefs as prefs_mod
 from health import ValidationError
 
 # ---------------------------------------------------------------- 分类与保质期
@@ -369,6 +370,7 @@ RECIPE_PROMPT = """你是做家常菜很在行的朋友，根据用户冰箱里�
   "kcal_per_serving": 每份估算热量整数,
   "protein_g": 每份蛋白质克数整数, "carbs_g": 每份碳水克数整数, "fat_g": 每份脂肪克数整数,
   "ingredients": [{"name": "用料通用名", "amount": "用量，如 2个、150g、少许", "optional": 是否可省略}],
+  "equipment": ["用到的厨具，从 炒锅/锅/电饭煲/微波炉/空气炸锅/烤箱 里选"],
   "steps": ["步骤1", "步骤2", "..."],
   "tips": "一条小贴士，可为空字符串"
 }]}
@@ -379,7 +381,7 @@ RECIPE_PROMPT = """你是做家常菜很在行的朋友，根据用户冰箱里�
 3. 3 道菜要有区别（做法或主料不同），优先家常、步骤清楚、新手也能做成。
 4. 过敏原和用户不吃的东西绝对不能出现在用料里。
 5. 步骤写清火候和时间（如「中火炒 2 分钟」），每步一句话，4–8 步。
-6. 份量按用户说明；没说就按 1 人份。"""
+6. 份量、口味、厨具、时间按「用户情况」来；用户补充的要求优先。"""
 
 
 def _llm_json(client, model: str, system: str, user: str, max_tokens: int = 4000) -> dict:
@@ -392,16 +394,6 @@ def _llm_json(client, model: str, system: str, user: str, max_tokens: int = 4000
     if not isinstance(data, dict):
         raise ValueError("模型返回的不是 JSON 对象")
     return data
-
-
-def _allergy_terms(profile: dict) -> list[str]:
-    terms = []
-    for key in ("allergies",):
-        for t in re.split(r"[，,、；;\s/]+", profile.get(key) or ""):
-            t = t.strip().removesuffix("过敏")
-            if t and t not in ("无", "没有", "暂无", "不过敏"):
-                terms.append(t)
-    return terms
 
 
 def clean_recipe(raw: dict) -> dict | None:
@@ -432,6 +424,8 @@ def clean_recipe(raw: dict) -> dict | None:
             "kcal_per_serving": bounded(kcal, 0, 3000, None) if kcal is not None else None,
             # 每份营养素（估算）。模型没给就是 None，记一餐时不填，避免显示成「0g」误导
             "macros": macros if all(v is not None for v in macros.values()) else None,
+            "equipment": [health._text(e, 10) for e in (raw.get("equipment") or []) if health._text(e, 10)][:6]
+            if isinstance(raw.get("equipment"), list) else [],
             "ingredients": ingredients, "steps": steps, "tips": health._text(raw.get("tips"), 120)}
 
 
@@ -462,17 +456,22 @@ def annotate(recipe: dict, pantry: list[dict], staples=DEFAULT_STAPLES) -> dict:
     return recipe
 
 
-def rank_key(recipe: dict):
-    """推荐排序（越小越靠前）：
-    现在就能做（不缺必需料）→ 用到的临期食材多 → 缺料少 → 用到的库存多 → 耗时短。
-    「能不能马上做」放第一位：核心问题是「剩下的东西能做什么」，缺料的菜再能消耗临期食材也得先去买。"""
+def rank_key(recipe: dict, goals=()):
+    """推荐排序（越小越靠前）。默认：
+      现在就能做（不缺必需料）→ 符合你的时间/难度/热量 → 用到的临期食材多 → 缺料少 → 用到的库存多 → 耗时短
+    「能不能马上做」放第一位：核心问题是「剩下的东西能做什么」，缺料的菜再能消耗临期食材也得先去买。
+    问卷 Q7 改变中间几位的先后：
+      选了「食材总放坏」→ 用到的临期食材多 提到「符合设置」之前（宁可多花点时间也先救食材）
+      选了「想省钱」（且没选上一项）→ 缺料少 提到「临期」之前（少买一样是一样）"""
     missing = len(recipe["missing"])
-    return (missing > 0, -len(recipe["uses_expiring"]), missing, -recipe["uses_count"], recipe["minutes"])
-
-
-def blocked_by_allergy(recipe: dict, terms: list[str]) -> str | None:
-    text = recipe["title"] + " " + " ".join(i["name"] for i in recipe["ingredients"])
-    return next((t for t in terms if t in text), None)
+    off = bool(recipe.get("fit"))
+    expiring = -len(recipe["uses_expiring"])
+    tail = (-recipe["uses_count"], recipe["minutes"])
+    if "waste" in goals:
+        return (missing > 0, expiring, off, missing, *tail)
+    if "save_money" in goals:
+        return (missing > 0, off, missing, expiring, *tail)
+    return (missing > 0, off, expiring, missing, *tail)
 
 
 def _meal_slot(now: datetime) -> str:
@@ -495,23 +494,30 @@ def recommend(conn, client, model: str | None, user_id: int, now: datetime, note
         raise ValidationError("冰箱里还没有食材，先加几样吧")
 
     profile = health.get_profile(conn, user_id)
-    terms = _allergy_terms(profile)
+    prefs = prefs_mod.load(conn, user_id)
+    allergies = prefs_mod.allergy_groups(profile)
+    staples = prefs_mod.staple_names(prefs)
     lines = [f"现在是 {now.strftime('%H:%M')}，这顿是{_meal_slot(now)}。"]
     lines.append("冰箱里的食材（按到期从近到远）：")
     for p in pantry[:60]:
         flag = "【临期】" if p["days_left"] is not None and p["days_left"] <= EXPIRING_DAYS else ""
         lines.append(f"- {flag}{describe_item(p)} · {p['storage_label']}")
-    lines.append("常备调料（不算缺料）：" + "、".join(DEFAULT_STAPLES[:12]))
-    if terms:
-        lines.append("过敏，绝对不能用：" + "、".join(terms))
+    lines.append("常备调料（不算缺料）：" + ("、".join(prefs["staples"]) or "没有"))
+    lines.append("用户情况：")
+    lines.extend("- " + t for t in prefs_mod.prompt_lines(prefs))
+    if allergies:
+        lines.append("过敏，绝对不能用：" + "、".join(label for label, _ in allergies))
     if profile.get("diet_preferences"):
         lines.append("饮食偏好：" + profile["diet_preferences"])
     if profile.get("conditions"):
         lines.append("健康状况（做菜时注意）：" + profile["conditions"])
     targets = health.compute_targets(profile, today)
-    if targets["complete"] and profile.get("goal") in ("lose", "gain"):
-        remaining = health.daily_summary(conn, user_id, today, today)["remaining_calories"]
-        lines.append(f"用户在{health.GOALS[profile['goal']][0]}，今天还可摄入约 {remaining} kcal，每份热量尽量贴合。")
+    kcal_left = None
+    if targets["complete"] and (profile.get("goal") in ("lose", "gain") or "healthy" in prefs["goals"]):
+        kcal_left = health.daily_summary(conn, user_id, today, today)["remaining_calories"]
+        lines.append(f"今天还可摄入约 {kcal_left} kcal，每份热量尽量不超过它。")
+    if "healthy" not in prefs["goals"]:
+        kcal_left = None  # 只有选了「想吃得健康」才把超热量的菜排后面
     if note:
         lines.append("用户补充：" + health._text(note, 200))
 
@@ -521,14 +527,18 @@ def recommend(conn, client, model: str | None, user_id: int, now: datetime, note
         recipe = clean_recipe(raw)
         if recipe is None:
             continue
-        hit = blocked_by_allergy(recipe, terms)
-        if hit:
-            dropped.append({"title": recipe["title"], "reason": f"含过敏原「{hit}」"})
+        recipe, reason = prefs_mod.apply_constraints(recipe, prefs, allergies)
+        if recipe is None:
+            dropped.append({"title": raw.get("title") or "", "reason": reason})
             continue
-        recipes.append(annotate(recipe, pantry))
+        annotate(recipe, pantry, staples)
+        recipe["fit"] = prefs_mod.fit_notes(recipe, prefs, kcal_left)
+        recipes.append(recipe)
     if not recipes:
-        raise ValidationError("这次没能生成合适的菜谱，换个说法再试一次吧")
-    recipes.sort(key=rank_key)
+        why = "、".join(dict.fromkeys(d["reason"] for d in dropped))
+        raise ValidationError(f"这次想到的菜都不符合你的设置（{why}），再试一次吧" if why
+                              else "这次没能生成合适的菜谱，换个说法再试一次吧")
+    recipes.sort(key=lambda r: rank_key(r, prefs["goals"]))
 
     batch = uuid.uuid4().hex[:12]
     version = pantry_version(conn, user_id)
@@ -548,7 +558,7 @@ def recipe_payload(conn, user_id: int, recipe_id: int, today: date, refresh: boo
         return None
     data = json.loads(row["data"])
     if refresh:
-        annotate(data, list_pantry(conn, user_id, today))
+        annotate(data, list_pantry(conn, user_id, today), prefs_mod.staple_names(prefs_mod.load(conn, user_id)))
     cooked = conn.execute("SELECT COUNT(*) FROM cook_logs WHERE user_id=? AND recipe_id=?",
                           (user_id, recipe_id)).fetchone()[0]
     return {"id": row["id"], "batch": row["batch"], "saved": bool(row["saved"]), "created_at": row["created_at"],

@@ -2,15 +2,17 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Bookmark, ChefHat, ExternalLink, HeartPulse, LogOut, MessageCircleHeart, MessageSquarePlus,
-  PanelLeftClose, PanelLeftOpen, PanelRightClose, Plus, Refrigerator, X,
+  PanelLeftClose, PanelLeftOpen, PanelRightClose, Plus, Refrigerator, UserRound, X,
 } from 'lucide-react'
 import { useAuth } from '../App'
 import { emitDataChanged } from '../lib/motion'
+import { usePrefs } from '../lib/prefs'
 import ChatView, { type AskRequest } from './ChatView'
 import Logo, { LogoMark } from './Logo'
 import RecordModal from './RecordModal'
 
-// 主导航围绕「冰箱 → 做菜」；健康降为次要入口（一个入口，进去再分总览/趋势/记录/档案）
+// 主导航围绕「冰箱 → 做菜」。健康默认是次要入口（在「我的」旁边）；
+// 问卷里选了「想吃得健康」的用户，健康进主导航（手机底栏里替换「对话」，对话仍可从右下角按钮进入）
 const NAV = [
   { to: '/app', label: '今天吃什么', short: '今天', icon: ChefHat, end: true },
   { to: '/app/fridge', label: '冰箱', short: '冰箱', icon: Refrigerator },
@@ -30,6 +32,7 @@ const TITLES: Record<string, [string, string]> = {
   '/app/trends': ['健康 · 趋势', '看看最近的变化'],
   '/app/records': ['健康 · 记录', '你和 Favor 记下的每一条'],
   '/app/profile': ['健康 · 档案', '过敏和饮食偏好也会用在菜谱推荐里'],
+  '/app/me': ['我的', '口味、厨具和身体档案'],
 }
 
 // 本机偏好（侧栏折叠、停靠栏开关、停靠栏当前对话）：读写失败时退回默认值
@@ -65,6 +68,12 @@ export default function Workbench() {
   const onChatPage = pathname.startsWith('/app/chat')
   const showDock = dockOpen && !onChatPage
   const name = user?.nickname || user?.username || ''
+  const healthMain = !!usePrefs()?.health_in_nav
+  const healthLink = (
+    <NavLink to="/app/health" title="健康" className={inHealth ? 'active' : ''}>
+      <HeartPulse size={healthMain ? 19 : 18} strokeWidth={1.9} /><span>健康</span>
+    </NavLink>
+  )
 
   const toggleDock = (open: boolean) => {
     setDockOpen(open)
@@ -104,12 +113,12 @@ export default function Workbench() {
               {to === '/app/chat' && <span className="badge">AI</span>}
             </NavLink>
           ))}
+          {healthMain && healthLink}
         </nav>
         <div className="wb-label">更多</div>
         <nav className="wb-nav secondary">
-          <NavLink to="/app/health" title="健康" className={inHealth ? 'active' : ''}>
-            <HeartPulse size={18} strokeWidth={1.9} /><span>健康</span>
-          </NavLink>
+          <NavLink to="/app/me" title="我的"><UserRound size={18} strokeWidth={1.9} /><span>我的</span></NavLink>
+          {!healthMain && healthLink}
         </nav>
         <div className="wb-side-foot">
           <div className="wb-user">
@@ -177,10 +186,11 @@ export default function Workbench() {
       )}
 
       <nav className="tabbar">
-        {NAV.map(({ to, short, icon: Icon, end }) => (
+        {NAV.filter(n => !(healthMain && n.to === '/app/chat')).map(({ to, short, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end}><Icon size={21} strokeWidth={1.8} />{short}</NavLink>
         ))}
-        <NavLink to="/app/health" className={inHealth ? 'active' : ''}><HeartPulse size={21} strokeWidth={1.8} />健康</NavLink>
+        {healthMain && <NavLink to="/app/health" className={inHealth ? 'active' : ''}><HeartPulse size={21} strokeWidth={1.8} />健康</NavLink>}
+        <NavLink to="/app/me" className={!healthMain && inHealth ? 'active' : ''}><UserRound size={21} strokeWidth={1.8} />我的</NavLink>
       </nav>
 
       {recording && <RecordModal onClose={() => setRecording(false)} onSaved={() => emitDataChanged()} />}

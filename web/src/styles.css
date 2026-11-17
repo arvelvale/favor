@@ -924,3 +924,111 @@ a.image-frame:hover img.in { transform: scale(1.03); }
 @media (prefers-reduced-motion: reduce) {
   .recipe-card, .parsed-row, .adder-card, .cook-stage, .cook-done, .cook-mode { animation: none !important; }
 }
+
+/* ------------------------------------------------------------ 问卷（/welcome）与「我的」 */
+.welcome { min-height: 100dvh; background: var(--surface); display: flex; flex-direction: column;
+  background-image: radial-gradient(900px 320px at 50% -120px, #fff1ea 0%, rgba(255, 241, 234, 0) 70%); }
+.welcome-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 24px; }
+.q-progress { display: flex; gap: 6px; max-width: 640px; width: calc(100% - 32px); margin: 4px auto 0; }
+.q-progress span { flex: 1; height: 5px; border-radius: 99px; background: var(--surface-3); transition: background .35s var(--ease); }
+.q-progress span.done { background: var(--brand-tint); }
+.q-progress span.now { background: var(--brand); }
+.welcome-main { flex: 1; display: flex; justify-content: center; padding: 28px 16px 40px; }
+.q-card { width: 100%; max-width: 640px; animation: q-in .4s var(--ease) both; }
+@keyframes q-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.q-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.q-badge { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; color: var(--c);
+  background: color-mix(in srgb, var(--c) 12%, white); }
+.q-count { font-size: 13px; color: var(--ink-3); }
+.q-card h1 { font-size: 26px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 6px; color: var(--ink); }
+.q-hint { color: var(--ink-3); font-size: 14px; margin: 0 0 22px; }
+.q-content { min-height: 200px; }
+.q-options { display: grid; gap: 10px; }
+.q-options.grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.q-option { display: flex; align-items: center; gap: 14px; text-align: left; padding: 14px 16px; border-radius: 16px;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer;
+  transition: border-color .2s, background .2s, transform .15s, box-shadow .2s; }
+.q-option:hover { border-color: color-mix(in srgb, var(--c) 45%, white); box-shadow: var(--shadow); }
+.q-option:active { transform: scale(.985); }
+.q-option.on { border-color: var(--c); background: color-mix(in srgb, var(--c) 6%, white); }
+.q-option:focus-visible { outline: 3px solid color-mix(in srgb, var(--c) 30%, white); outline-offset: 2px; }
+.q-ico { width: 42px; height: 42px; border-radius: 13px; flex-shrink: 0; display: grid; place-items: center;
+  color: var(--c); background: color-mix(in srgb, var(--c) 12%, white); }
+.q-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.q-text b { font-weight: 500; font-size: 15px; }
+.q-text small { color: var(--ink-3); font-size: 12.5px; }
+.q-tick { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; border: 1.5px solid var(--line-strong);
+  display: grid; place-items: center; color: #fff; transition: all .2s; }
+.q-tick.square { border-radius: 7px; }
+.q-option.on .q-tick { background: var(--c); border-color: var(--c); }
+.q-sub { margin-top: 14px; padding: 14px 16px; border-radius: 16px; background: var(--surface-2); display: grid; gap: 12px; }
+.q-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 14px; color: var(--ink-2); }
+.q-sub .stepper button { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface);
+  display: grid; place-items: center; color: var(--ink-2); cursor: pointer; }
+.q-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.q-chip { display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 15px; border-radius: 999px;
+  border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink-2); font-size: 14px; cursor: pointer; transition: all .2s; }
+.q-chip:hover { border-color: var(--brand); color: var(--brand-700); }
+.q-chip.on { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-700); font-weight: 500; }
+.q-chips.danger .q-chip.on { background: var(--danger-soft); border-color: var(--danger); color: #b4232a; }
+.q-chip-add { display: inline-flex; align-items: center; height: 36px; border-radius: 999px; border: 1.5px dashed var(--line-strong); padding: 0 4px 0 14px; }
+.q-chip-add input { border: none; outline: none; background: transparent; width: 96px; font-size: 14px; color: var(--ink); }
+.q-chip-add button { width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--surface-3); color: var(--ink-2); display: grid; place-items: center; cursor: pointer; }
+.q-chip-add button:disabled { opacity: .4; cursor: default; }
+.q-taste, .q-body { display: grid; gap: 20px; }
+.q-group h3 { font-size: 14px; font-weight: 500; color: var(--ink); margin: 0 0 10px; }
+.q-group h3 small { font-weight: 400; color: var(--ink-3); font-size: 12.5px; margin-left: 6px; }
+.q-group h3.danger { color: #b4232a; }
+.segmented.wide { display: flex; width: 100%; }
+.segmented.wide button { flex: 1; height: 38px; font-size: 14px; }
+.q-body-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.q-body-grid .span2 { grid-column: span 2; }
+.q-note { font-size: 12.5px; color: var(--ink-3); margin: 0; }
+.q-err { color: #b4232a; font-size: 13px; margin: 14px 0 0; }
+.q-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
+.q-foot-right { display: flex; align-items: center; gap: 6px; }
+
+.adjust-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.adjust-list a, .adjust-list button, .me-link { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  border-radius: 14px; border: 1px solid var(--line); background: var(--surface); text-align: left; color: var(--ink);
+  font-size: 14px; cursor: pointer; text-decoration: none; transition: border-color .2s, box-shadow .2s; }
+.adjust-list a:hover, .adjust-list button:hover, .me-link:hover { border-color: color-mix(in srgb, var(--c) 45%, white); box-shadow: var(--shadow); }
+.adj-ico { width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0; display: grid; place-items: center;
+  color: var(--c); background: color-mix(in srgb, var(--c) 12%, white); }
+.adj-text { flex: 1; min-width: 0; line-height: 1.5; }
+.adj-text em { font-style: normal; font-size: 11.5px; color: var(--ink-3); background: var(--surface-3); border-radius: 6px; padding: 1px 6px; margin-left: 6px; white-space: nowrap; }
+.adj-go { color: var(--ink-3); flex-shrink: 0; }
+
+.me-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+.me-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; }
+.me-head .grow { display: flex; flex-direction: column; }
+.me-head b { font-size: 17px; font-weight: 600; }
+.me-head span { color: var(--ink-3); font-size: 13px; }
+.avatar.lg { width: 52px; height: 52px; font-size: 20px; }
+.me-lead { font-size: 13px; margin: -4px 0 14px; }
+.me-links { display: grid; gap: 10px; }
+.me-link .grow { display: flex; flex-direction: column; gap: 2px; }
+.me-link b { font-weight: 500; }
+.me-link small { color: var(--ink-3); font-size: 12.5px; }
+@container main (max-width: 860px) { .me-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.recipe-fit, .recipe-stripped { display: flex; align-items: center; gap: 5px; font-size: 12.5px; margin: 0; padding-top: 6px; }
+.recipe-fit { color: #8a5a00; }
+.recipe-stripped { color: var(--ink-3); }
+.recipe-notes { margin-top: 10px; display: grid; gap: 2px; }
+.hero-link { color: inherit; font-weight: 500; text-decoration: underline; text-decoration-color: var(--brand-tint); text-underline-offset: 3px; }
+/* 选了「食材总放坏」：快过期的卡片排到最前 */
+.ov.waste-first .expiring-card { order: -1; }
+
+@media (max-width: 560px) {
+  .welcome-top { padding: 14px 16px; }
+  .welcome-main { padding: 20px 16px 32px; }
+  .q-card h1 { font-size: 22px; }
+  .q-options.grid2 { grid-template-columns: minmax(0, 1fr); }
+  .q-foot { flex-wrap: wrap; }
+  .q-foot-right { margin-left: auto; }
+  .q-body-grid { grid-template-columns: minmax(0, 1fr); }
+  .q-body-grid .span2 { grid-column: auto; }
+  .me-head { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) { .q-card { animation: none; } }

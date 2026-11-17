@@ -12,6 +12,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import health
 import kitchen
+import prefs
 from agent import runner
 from config import Settings, logger
 from rag import retriever as rag_retriever
@@ -131,7 +132,8 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
         session.clear()
         session.permanent = True
         session["user_id"] = cur.lastrowid
-        return jsonify({"user": {"id": cur.lastrowid, "username": username, "nickname": nickname}}), 201
+        return jsonify({"user": {"id": cur.lastrowid, "username": username, "nickname": nickname,
+                                 "prefs_status": "new"}}), 201
 
     @app.post("/api/auth/login")
     def login():
@@ -143,7 +145,8 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
         session.clear()
         session.permanent = True
         session["user_id"] = row["id"]
-        return jsonify({"user": {"id": row["id"], "username": row["username"], "nickname": row["nickname"]}})
+        return jsonify({"user": {"id": row["id"], "username": row["username"], "nickname": row["nickname"],
+                                 "prefs_status": prefs.get(get_db(), row["id"])["status"]}})
 
     @app.post("/api/auth/logout")
     def logout():
@@ -153,7 +156,35 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
     @app.get("/api/auth/me")
     @login_required
     def me():
-        return jsonify({"user": g.user})
+        return jsonify({"user": g.user | {"prefs_status": prefs.get(get_db(), g.user["id"])["status"]}})
+
+    # ------------------------------------------------------------ 偏好（问卷）
+
+    def prefs_payload(conn, user_id):
+        data = prefs.get(conn, user_id)
+        profile = health.get_profile(conn, user_id)
+        return data | {"allergies": prefs.allergy_list(profile), "servings": prefs.servings(data["prefs"]),
+                       "health_in_nav": prefs.health_in_nav(data["prefs"])}
+
+    @app.get("/api/preferences")
+    @login_required
+    def get_preferences():
+        return jsonify(prefs_payload(get_db(), g.user["id"]))
+
+    @app.put("/api/preferences")
+    @login_required
+    def put_preferences():
+        """保存问卷（可只传一部分）。allergies 写回健康档案（单一来源）；profile 为 Q8 的身体数据。"""
+        conn = get_db()
+        data = body()
+        profile_changes = dict(data.get("profile") or {}) if isinstance(data.get("profile"), dict) else {}
+        if isinstance(data.get("allergies"), list):
+            profile_changes["allergies"] = "、".join(prefs._str_list(data["allergies"]))
+        if profile_changes:
+            health.save_profile(conn, g.user["id"], profile_changes)
+        prefs.save(conn, g.user["id"], data.get("prefs") or {}, status=data.get("status"), skipped=data.get("skipped"))
+        conn.commit()
+        return jsonify(prefs_payload(conn, g.user["id"]))
 
     # ------------------------------------------------------------ 档案
 

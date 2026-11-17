@@ -3,6 +3,7 @@ from datetime import datetime
 
 import health
 import kitchen
+import prefs
 
 WEEKDAYS = "一二三四五六日"
 IMAGE_RULE = ("- 用户想看某道菜做出来的样子，或你在文字里详细给出某一道菜的做法时，调用 generate_food_image "
@@ -17,6 +18,9 @@ SYSTEM_TEMPLATE = """你是 Favor，用户的厨房搭子。你最重要的事�
 
 # 冰箱里现在有
 {pantry}
+
+# 用户的厨房偏好（来自问卷，推荐和回答做法时都要遵守）
+{prefs}
 
 # 用户档案
 {profile}
@@ -110,8 +114,10 @@ def build_system_prompt(conn, user_id: int, now: datetime, image_enabled: bool =
                    if pantry else "（还是空的）")
     if len(pantry) > 40:
         pantry_text += f"\n- ……另有 {len(pantry) - 40} 样，需要时调用 list_pantry"
+    user_prefs = prefs.load(conn, user_id)
     return SYSTEM_TEMPLATE.format(
         now=now.strftime("%Y-%m-%d %H:%M"), weekday=WEEKDAYS[now.weekday()], pantry=pantry_text,
+        prefs=prefs.summary_text(user_prefs),
         profile=_profile_text(profile, summary["targets"], health.bmi(profile)),
         today="\n".join(lines),
         image_rule=IMAGE_RULE if image_enabled else "")
