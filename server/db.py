@@ -144,6 +144,19 @@ CREATE TABLE IF NOT EXISTS user_prefs (
     updated_at TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
+-- 口味信号（第 5 期）：open 打开过、skip 换一批时没碰过、dislike 用户说不想吃（reason: not_like/too_hard/recent）
+-- created_at 记用户本地时间，和 cook_logs.cooked_at 一致
+CREATE TABLE IF NOT EXISTS recipe_feedback (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipe_id  INTEGER REFERENCES recipes(id) ON DELETE SET NULL,
+    title      TEXT    NOT NULL,
+    kind       TEXT    NOT NULL,
+    reason     TEXT,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_user ON recipe_feedback(user_id, kind, created_at);
+
 -- 按次计费的调用（如拍照识别），用于每日限额
 CREATE TABLE IF NOT EXISTS usage_log (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,

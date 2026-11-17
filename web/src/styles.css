@@ -1144,3 +1144,48 @@ a.image-frame:hover img.in { transform: scale(1.03); }
 .parsed-row.pickable input { width: 18px; height: 18px; accent-color: var(--brand); flex-shrink: 0; cursor: pointer; }
 .unsure { font-style: normal; font-size: 11px; font-weight: 500; color: #8a5a00; background: #fff4d6; border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
 @media (prefers-reduced-motion: reduce) { .photo-drop.busy::after { animation: none; display: none; } }
+
+/* ------------------------------------------------------------ 第 5 期：不想吃、过期清点、Favor 学到的 */
+.recipe-card-wrap { position: relative; display: flex; min-width: 0; }
+.recipe-card-wrap > .recipe-card { flex: 1; min-width: 0; }
+.recipe-card-wrap:has(.dislike) .recipe-top { padding-right: 34px; }
+.dislike { position: relative; }
+.dislike.compact { position: absolute; top: 12px; right: 12px; z-index: 2; }
+.dislike-btn { width: 30px; height: 30px; border-radius: 10px; color: var(--ink-3); background: var(--surface); }
+.dislike-btn:hover, .dislike-btn[aria-expanded="true"] { color: var(--ink); background: var(--surface-3); }
+.dislike-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; width: 200px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 14px; box-shadow: var(--shadow-pop); padding: 6px; display: grid; gap: 2px; animation: pop .2s var(--ease) both; }
+.dislike-q { font-size: 12px; color: var(--ink-3); padding: 6px 10px 4px; }
+.dislike-menu button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; border: none; background: none;
+  border-radius: 10px; padding: 8px 10px; cursor: pointer; color: var(--ink); }
+.dislike-menu button:hover, .dislike-menu button:focus-visible { background: var(--surface-2); outline: none; }
+.dislike-menu b { font-weight: 500; font-size: 13.5px; }
+.dislike-menu small { font-size: 12px; color: var(--ink-3); }
+.head-actions .dislike-menu { right: auto; left: 0; }
+
+.ov > .review-card { order: -3; }
+.review-card { border-color: #ffd8c2; background: linear-gradient(180deg, #fff8f3, var(--surface) 60%); }
+.review-lead { font-size: 13px; margin: -4px 0 12px; }
+.review-list { display: grid; gap: 8px; }
+.review-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); flex-wrap: wrap; }
+.review-row b { font-weight: 500; }
+.review-actions { margin-left: auto; display: flex; gap: 4px; }
+.review-foot { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.review-foot .muted { font-size: 13px; }
+
+.me-side { display: grid; gap: 18px; align-content: start; }
+.me-taste h3 { font-size: 13px; font-weight: 500; color: var(--ink-2); margin: 4px 0 8px; }
+.me-taste h3 + * { margin-bottom: 12px; }
+.taste-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.taste-chips span { font-size: 13px; padding: 4px 11px; border-radius: 99px; background: #f3efff; color: #5b3fc4; }
+.taste-empty { font-size: 12.5px; margin: 0 0 12px; }
+.taste-less { display: grid; gap: 6px; }
+.taste-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; }
+.taste-row .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.taste-row b { font-weight: 500; font-size: 13.5px; }
+.taste-row span { font-size: 12px; color: var(--ink-3); }
+@media (max-width: 560px) { .review-actions { margin-left: 38px; } }
+@media (prefers-reduced-motion: reduce) { .dislike-menu { animation: none; } }
+/* 推荐区和菜谱头部带入场动画的 transform，各自成了层叠上下文；不抬高的话，
+   后面的「顺手补几样」/正文卡片会盖住「不想吃」弹出菜单的下半截 */
+.recipes-section, .recipe-head { position: relative; z-index: 3; }

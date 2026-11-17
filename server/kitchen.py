@@ -12,6 +12,7 @@ from datetime import date, datetime, timedelta
 
 import health
 import prefs as prefs_mod
+import taste
 from health import ValidationError
 
 # ---------------------------------------------------------------- 分类与保质期
@@ -296,6 +297,33 @@ def remove_item(conn, user_id: int, item_id: int, reason: str = "used") -> bool:
     return cur.rowcount > 0
 
 
+def usable_pantry(conn, user_id: int, today: date) -> list[dict]:
+    """推荐时能用的库存：去掉按（估算）到期日已经过期的。过期的先让用户在首页清点（还在 / 用完了 / 扔了），
+    确认「还在」的会重新进来。"""
+    return [p for p in list_pantry(conn, user_id, today) if p["days_left"] is None or p["days_left"] >= 0]
+
+
+def review_items(conn, user_id: int, decisions: list, today: date) -> dict:
+    """清点过期食材：keep 还在（到期日改成 2 天后，仍标「估算」，推荐时当临期优先用掉）/ used 用完了 / discarded 扔了。"""
+    if not isinstance(decisions, list) or not decisions:
+        raise ValidationError("没有要清点的食材")
+    done = {"keep": 0, "used": 0, "discarded": 0}
+    for d in decisions[:100]:
+        if not isinstance(d, dict) or d.get("action") not in done or not isinstance(d.get("id"), int):
+            raise ValidationError("清点结果格式不对")
+        row = conn.execute("SELECT id FROM pantry_items WHERE id=? AND user_id=? AND status='active'",
+                           (d["id"], user_id)).fetchone()
+        if row is None:
+            continue
+        if d["action"] == "keep":
+            conn.execute("UPDATE pantry_items SET expires_on=?, expires_estimated=1, updated_at=datetime('now') "
+                         "WHERE id=? AND user_id=?", ((today + timedelta(days=2)).isoformat(), d["id"], user_id))
+        else:
+            remove_item(conn, user_id, d["id"], d["action"])
+        done[d["action"]] += 1
+    return done
+
+
 def pantry_version(conn, user_id: int) -> str:
     """在用库存的内容指纹，用来判断推荐是否过时。
     不用 updated_at：它只精确到秒，推荐后同一秒内做菜扣库存会被漏判。"""
@@ -489,14 +517,19 @@ def recommend(conn, client, model: str | None, user_id: int, now: datetime, note
                         (user_id, datetime.utcnow().date().isoformat())).fetchone()[0]
     if used >= daily_limit:
         raise ValidationError(f"今天已经推荐了 {used} 次，明天再来吧（每天最多 {daily_limit} 次）")
-    pantry = list_pantry(conn, user_id, today)
+    pantry = usable_pantry(conn, user_id, today)
     if not pantry:
+        if list_pantry(conn, user_id, today):
+            raise ValidationError("冰箱里的东西按估算都过期了，先在首页清点一下吧")
         raise ValidationError("冰箱里还没有食材，先加几样吧")
 
     profile = health.get_profile(conn, user_id)
     prefs = prefs_mod.load(conn, user_id)
     allergies = prefs_mod.allergy_groups(profile)
     staples = prefs_mod.staple_names(prefs)
+    # 换一批：上一批里没点开、没收藏、没做的菜记一次「跳过」，再读学到的口味
+    taste.mark_skips(conn, user_id, now)
+    learned = taste.profile(conn, user_id, now)
     lines = [f"现在是 {now.strftime('%H:%M')}，这顿是{_meal_slot(now)}。"]
     lines.append("冰箱里的食材（按到期从近到远）：")
     for p in pantry[:60]:
@@ -507,6 +540,10 @@ def recommend(conn, client, model: str | None, user_id: int, now: datetime, note
     lines.extend("- " + t for t in prefs_mod.prompt_lines(prefs))
     if allergies:
         lines.append("过敏，绝对不能用：" + "、".join(label for label, _ in allergies))
+    learned_lines = taste.prompt_lines(learned)
+    if learned_lines:
+        lines.append("从用户以前的选择里学到的：")
+        lines.extend("- " + t for t in learned_lines)
     if profile.get("diet_preferences"):
         lines.append("饮食偏好：" + profile["diet_preferences"])
     if profile.get("conditions"):
@@ -528,11 +565,12 @@ def recommend(conn, client, model: str | None, user_id: int, now: datetime, note
         if recipe is None:
             continue
         recipe, reason = prefs_mod.apply_constraints(recipe, prefs, allergies)
-        if recipe is None:
+        reason = reason or (taste.blocked(recipe, learned) if recipe else None)
+        if reason:
             dropped.append({"title": raw.get("title") or "", "reason": reason})
             continue
         annotate(recipe, pantry, staples)
-        recipe["fit"] = prefs_mod.fit_notes(recipe, prefs, kcal_left)
+        recipe["fit"] = prefs_mod.fit_notes(recipe, prefs, kcal_left) + taste.notes(recipe, learned)
         recipes.append(recipe)
     if not recipes:
         why = "、".join(dict.fromkeys(d["reason"] for d in dropped))
@@ -558,11 +596,14 @@ def recipe_payload(conn, user_id: int, recipe_id: int, today: date, refresh: boo
         return None
     data = json.loads(row["data"])
     if refresh:
-        annotate(data, list_pantry(conn, user_id, today), prefs_mod.staple_names(prefs_mod.load(conn, user_id)))
+        annotate(data, usable_pantry(conn, user_id, today), prefs_mod.staple_names(prefs_mod.load(conn, user_id)))
     cooked = conn.execute("SELECT COUNT(*) FROM cook_logs WHERE user_id=? AND recipe_id=?",
                           (user_id, recipe_id)).fetchone()[0]
+    # 用户对这道说过「不想吃」：前端据此从推荐列表里隐藏（刷新后也不再出现）
+    disliked = conn.execute("SELECT reason FROM recipe_feedback WHERE user_id=? AND recipe_id=? AND kind='dislike' "
+                            "ORDER BY id DESC LIMIT 1", (user_id, recipe_id)).fetchone()
     return {"id": row["id"], "batch": row["batch"], "saved": bool(row["saved"]), "created_at": row["created_at"],
-            "cooked_count": cooked, **data}
+            "cooked_count": cooked, "disliked": disliked["reason"] if disliked else None, **data}
 
 
 def latest_batch(conn, user_id: int, today: date) -> dict:

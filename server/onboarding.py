@@ -18,7 +18,8 @@ PANTRY_GOAL = 3  # 第 1 步：冰箱里至少放过 3 样
 
 # 情境提示（每条一次）。顺序即优先级
 TIP_IDS = ("expiring", "ask_household", "ask_skill", "ask_minutes", "ask_equipment", "ask_staples", "ask_taste",
-           "ask_goals", "expiry_dates", "health")
+           "ask_goals", "learning", "expiry_dates", "health")
+LEARNING_TIP_DAYS = 3  # 在 3 个不同的日子里推荐过或做过菜，才说「推荐会越来越合口味」（第 5 期做了口味学习，这句话才是真的）
 HEALTH_TIP_AFTER_DAYS = 7
 
 
@@ -35,7 +36,8 @@ def steps(conn, user_id: int, opened_recipe: bool) -> dict:
     return {
         "pantry": _count(conn, "SELECT COUNT(*) FROM pantry_items WHERE user_id=?", user_id) >= PANTRY_GOAL,
         "recommend": _count(conn, "SELECT COUNT(*) FROM recipes WHERE user_id=?", user_id) > 0,
-        "open": opened_recipe,
+        # 打开过菜谱：第 5 期起由 recipe_feedback 里的 open 记录推导；opened_recipe 是第 3 期存的旧标记，保留兼容
+        "open": opened_recipe or _count(conn, "SELECT COUNT(*) FROM recipe_feedback WHERE user_id=? AND kind='open'", user_id) > 0,
         "cook": (_count(conn, "SELECT COUNT(*) FROM cook_logs WHERE user_id=?", user_id) > 0
                  or _count(conn, "SELECT COUNT(*) FROM recipes WHERE user_id=? AND saved=1", user_id) > 0),
     }
@@ -64,6 +66,11 @@ def available_tips(conn, user_id: int, today: date, done: dict, tour: str, seen:
     if done["recommend"]:
         # 第 2 期跳过的题，在用户看过一次推荐之后再问（这时候他知道这些设置有什么用）
         tips.extend(f"ask_{q}" for q in state["skipped"] if q != "body")
+    active_days = conn.execute(
+        "SELECT COUNT(*) FROM (SELECT date(created_at) FROM recipes WHERE user_id=? "
+        "UNION SELECT date(cooked_at) FROM cook_logs WHERE user_id=?)", (user_id, user_id)).fetchone()[0]
+    if active_days >= LEARNING_TIP_DAYS:
+        tips.append("learning")
     if len(pantry) >= 5 and all(p["expires_estimated"] or not p["expires_on"] for p in pantry):
         tips.append("expiry_dates")
     created = conn.execute("SELECT created_at FROM users WHERE id=?", (user_id,)).fetchone()[0]

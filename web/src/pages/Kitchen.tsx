@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, ChefHat, CircleAlert, Leaf, Loader2, RefreshCw, Refrigerator, Sparkles } from 'lucide-react'
-import { api, ApiError, type PantryItem, type RecipeBatch } from '../lib/api'
+import { ArrowRight, ChefHat, CircleAlert, ClipboardCheck, Leaf, Loader2, RefreshCw, Refrigerator, Sparkles } from 'lucide-react'
+import { api, ApiError, type DislikeReason, type PantryItem, type RecipeBatch, type RecipeBrief } from '../lib/api'
 import { isExpiring, STORAGE_META, STORAGES } from '../lib/kitchen'
 import { emitDataChanged, useDataChanged } from '../lib/motion'
 import { OnboardingChecklist, TipBanner } from '../components/Onboarding'
@@ -52,12 +52,24 @@ export default function KitchenPage() {
     finally { setThinking(false) }
   }
 
+  async function dislike(r: RecipeBrief, reason: DislikeReason) {
+    try {
+      await api.post(`/api/recipes/${r.id}/dislike`, { reason })
+      setBatch(b => b && { ...b, recipes: b.recipes.map(x => (x.id === r.id ? { ...x, disliked: reason } : x)) })
+      toast(reason === 'not_like' ? `好的，以后不再推荐「${r.title}」` : reason === 'too_hard' ? '记下了，以后多推省事的' : `好的，这几天先不推「${r.title}」`)
+    } catch (e) { toast(e instanceof ApiError ? e.message : '没记上，再试一次') }
+  }
+
   if (pantry === null) {
     return <div className="wb-page"><div className="ov"><div className="skeleton span-8" style={{ height: 260 }} /><div className="skeleton span-4" style={{ height: 260 }} /></div></div>
   }
 
-  const expiring = pantry.filter(p => isExpiring(p.days_left))
-  const hasRecipes = !!batch?.recipes.length
+  // 过期的（多半是按类别估算的日期）不进「快过期」，单独让用户清点；推荐时服务端也不会用它们
+  const expired = pantry.filter(p => p.days_left !== null && p.days_left < 0)
+  const expiring = pantry.filter(p => isExpiring(p.days_left) && !(p.days_left !== null && p.days_left < 0))
+  // 说过「不想吃」的不再展示（刷新后也一样）
+  const shown = (batch?.recipes ?? []).filter(r => !r.disliked)
+  const hasRecipes = shown.length > 0
 
   // 冰箱是空的：首页就是录入，别让用户先去找入口
   if (!pantry.length) {
@@ -79,6 +91,7 @@ export default function KitchenPage() {
   return (
     <div className="wb-page">
       <div className={`ov stagger ${wasteFirst ? 'waste-first' : ''}`}>
+        {expired.length > 0 && <ReviewCard items={expired} onDone={load} />}
         <TipBanner page="home" />
         <OnboardingChecklist />
         <section className="card kitchen-hero span-8">
@@ -129,7 +142,7 @@ export default function KitchenPage() {
             {hasRecipes && !thinking && <span className="muted">点开看用料和步骤，做完点「做好了」会自动更新冰箱</span>}
           </div>
           {thinking ? <RecipeSkeletons /> : hasRecipes ? (
-            <div className="recipe-grid">{batch!.recipes.map((r, i) => <RecipeCard key={r.id} r={r} index={i} tour={i === 0 ? 'first-recipe' : undefined} />)}</div>
+            <div className="recipe-grid">{shown.map((r, i) => <RecipeCard key={r.id} r={r} index={i} tour={i === 0 ? 'first-recipe' : undefined} onDislike={dislike} />)}</div>
           ) : (
             <div className="card empty-recipes">
               <ChefHat size={36} />
@@ -144,5 +157,53 @@ export default function KitchenPage() {
         </section>
       </div>
     </div>
+  )
+}
+
+/** 清点过期食材：按估算已经过期的，问一句「还在吗」。还在的改成 2 天后到期（当快过期优先用掉），用完/扔了的移出冰箱。 */
+function ReviewCard({ items, onDone }: { items: PantryItem[]; onDone: () => void }) {
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  const [confirmAll, setConfirmAll] = useState(false)
+  async function review(decisions: { id: number; action: 'keep' | 'used' | 'discarded' }[], msg: string) {
+    setBusy(true)
+    try {
+      await api.post('/api/pantry/review', { items: decisions })
+      toast(msg)
+      emitDataChanged()
+      onDone()
+    } catch (e) { toast(e instanceof ApiError ? e.message : '没改成，再试一次') }
+    finally { setBusy(false); setConfirmAll(false) }
+  }
+  return (
+    <section className="card span-12 review-card">
+      <div className="card-title">
+        <h2><ClipboardCheck size={16} color="#d9480f" />这几样按估算已经过期了，还在吗？</h2>
+      </div>
+      <p className="muted review-lead">过期的不会用在推荐里。点「还在」的会当成快过期的，优先帮你用掉。</p>
+      <div className="review-list">
+        {items.map(p => (
+          <div className="review-row" key={p.id}>
+            <CatDot category={p.category} size={28} />
+            <b>{p.name}</b>
+            <ExpiryPill daysLeft={p.days_left} estimated={p.expires_estimated} />
+            <div className="review-actions">
+              <button className="btn btn-sm" disabled={busy} onClick={() => review([{ id: p.id, action: 'keep' }], `${p.name}还在，先用掉它`)}>还在</button>
+              <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => review([{ id: p.id, action: 'used' }], `${p.name}用完了`)}>用完了</button>
+              <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => review([{ id: p.id, action: 'discarded' }], `${p.name}扔掉了`)}>扔了</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {items.length > 1 && (
+        <div className="review-foot">
+          {confirmAll
+            ? <><span className="muted">把这 {items.length} 样都移出冰箱？</span>
+                <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => setConfirmAll(false)}>算了</button>
+                <button className="btn btn-sm" disabled={busy} onClick={() => review(items.map(p => ({ id: p.id, action: 'discarded' as const })), `清掉了 ${items.length} 样`)}>都扔了</button></>
+            : <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => setConfirmAll(true)}>都不在了，一键清掉</button>}
+        </div>
+      )}
+    </section>
   )
 }

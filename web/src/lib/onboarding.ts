@@ -3,7 +3,7 @@ import { api } from './api'
 import { useDataChanged } from './motion'
 
 export type TourStep = 'pantry' | 'recommend' | 'open' | 'cook'
-export type TipId = 'expiring' | 'expiry_dates' | 'health' | `ask_${string}`
+export type TipId = 'expiring' | 'expiry_dates' | 'health' | 'learning' | `ask_${string}`
 
 export interface OnboardingState {
   tour: 'active' | 'skipped' | 'done'
