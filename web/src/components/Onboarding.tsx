@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, CalendarClock, Check, HeartPulse, Leaf, Lightbulb, SlidersHorizontal, X } from 'lucide-react'
+import { ArrowRight, CalendarClock, Check, HeartPulse, Leaf, Lightbulb, SlidersHorizontal, Sparkles, X } from 'lucide-react'
 import { updateOnboarding, useOnboarding, type OnboardingState, type TipId } from '../lib/onboarding'
 import { QUESTION_META, type QuestionKey } from '../lib/prefs'
 
@@ -55,7 +55,7 @@ export function OnboardingChecklist() {
   )
 }
 
-const HOME_TIPS = (id: TipId) => id === 'expiring' || id === 'health' || id.startsWith('ask_')
+const HOME_TIPS = (id: TipId) => id === 'expiring' || id === 'health' || id === 'learning' || id.startsWith('ask_')
 
 /** 情境提示：每条只出现一次，一次只出一条。首页和冰箱页各显示属于自己的那几种。 */
 export function TipBanner({ page }: { page: 'home' | 'fridge' }) {
@@ -73,6 +73,10 @@ export function TipBanner({ page }: { page: 'home' | 'fridge' }) {
   if (tip === 'expiring') {
     icon = <Leaf size={17} />; color = '#1e9e5e'
     text = '有食材快过期了。推荐时会把用得上它们的菜排在前面，帮你先用掉。'
+  } else if (tip === 'learning') {
+    icon = <Sparkles size={17} />; color = '#8b5cf6'
+    text = '推荐会根据你做过、收藏、跳过和说「不想吃」的菜慢慢调整。学到了什么，在「我的」里看得到，也能撤销。'
+    action = { label: '去看看', run: () => { seen(); navigate('/app/me') } }
   } else if (tip === 'expiry_dates') {
     icon = <CalendarClock size={17} />; color = '#f08a24'
     text = '现在的到期日都是按类别估的。点一样食材，改成包装上的日期，快过期提醒会更准。'

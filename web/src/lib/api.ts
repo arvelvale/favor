@@ -120,6 +120,8 @@ export interface Recipe {
   /** 因忌口/饮食方式去掉的可省略用料 */
   stripped?: string[]
   saved: boolean
+  /** 用户说过「不想吃」的原因（第 5 期）；有值时首页不再展示 */
+  disliked?: DislikeReason | null
   cooked_count: number
   created_at: string
 }
@@ -139,6 +141,9 @@ export interface CookUsage {
 export interface CookPreview { recipe: Recipe; usage: CookUsage[]; meal_type: string; eaten_servings: number }
 export interface CookResult { title: string; used: { name: string; result: string }[]; record: { id: number; text: string } | null }
 export interface CookLog { id: number; title: string; cooked_at: string; servings: number; recipe_id: number | null; used: { name: string; result: string }[] }
+
+export type DislikeReason = 'not_like' | 'too_hard' | 'recent'
+export interface TasteSummary { liked: string[]; less: { title: string; why: string }[] }
 
 export type RecipeBrief = Pick<Recipe, 'id' | 'title' | 'minutes' | 'difficulty' | 'kcal_per_serving' | 'missing' | 'uses_expiring' | 'summary' | 'fit' | 'stripped'>
 

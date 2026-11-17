@@ -4,11 +4,12 @@ import {
   ArrowLeft, Bookmark, BookmarkCheck, Check, ChefHat, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Clock, Flame,
   Leaf, Lightbulb, Loader2, Minus, Pause, Play, Plus, RotateCcw, ShoppingBasket, Timer, Users, X,
 } from 'lucide-react'
-import { api, ApiError, type CookPreview, type CookResult, type Recipe } from '../lib/api'
+import { api, ApiError, type CookPreview, type CookResult, type DislikeReason, type Recipe } from '../lib/api'
 import { DIFFICULTY, formatQty, MEAL_SLOTS } from '../lib/kitchen'
 import { emitDataChanged } from '../lib/motion'
-import { updateOnboarding, useOnboarding } from '../lib/onboarding'
+import { refreshOnboarding } from '../lib/onboarding'
 import { useToast } from '../components/ui'
+import { DislikeMenu } from '../components/Kitchen'
 
 export default function RecipePage() {
   const { id } = useParams()
@@ -26,10 +27,20 @@ export default function RecipePage() {
   }, [id, toast])
   useEffect(load, [load])
 
-  // 新手引导第 2 步「打开一道菜」：打开过就记下（服务端推导不出来）
-  const ob = useOnboarding()
-  const openedMarked = !!ob?.steps.open
-  useEffect(() => { if (recipe && ob && !openedMarked) updateOnboarding({ opened_recipe: true }) }, [recipe, ob, openedMarked])
+  // 打开过这道菜：口味信号（换一批时不算「跳过」）+ 新手引导第 2 步。每道菜每次进页面记一次，服务端去重
+  const recipeId = recipe?.id
+  useEffect(() => {
+    if (recipeId) api.post(`/api/recipes/${recipeId}/opened`).then(refreshOnboarding).catch(() => undefined)
+  }, [recipeId])
+
+  async function dislike(reason: DislikeReason) {
+    if (!recipe) return
+    try {
+      await api.post(`/api/recipes/${recipe.id}/dislike`, { reason })
+      setRecipe({ ...recipe, disliked: reason })
+      toast(reason === 'not_like' ? '好的，以后不再推荐这道' : reason === 'too_hard' ? '记下了，以后多推省事的' : '好的，这几天先不推这道')
+    } catch (e) { toast(e instanceof ApiError ? e.message : '没记上，再试一次') }
+  }
 
   async function toggleSave() {
     if (!recipe) return
@@ -80,6 +91,7 @@ export default function RecipePage() {
               ) : null}
             </div>
             <div className="head-actions" data-tour="cook-actions">
+              {!recipe.disliked && <DislikeMenu onPick={dislike} />}
               <button className="btn" onClick={toggleSave}>
                 {recipe.saved ? <><BookmarkCheck size={16} color="var(--brand)" />已收藏</> : <><Bookmark size={16} />收藏</>}
               </button>

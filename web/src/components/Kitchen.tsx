@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Camera, Check, CircleAlert, Clock, Flame, ImageIcon, Leaf, ListChecks, Loader2, MessageSquareText, Plus, ShoppingBasket,
-  Sparkles, X,
+  Camera, Check, CircleAlert, Clock, Flame, ImageIcon, Info, Leaf, ListChecks, Loader2, MessageSquareText, Plus,
+  ShoppingBasket, Sparkles, ThumbsDown, X,
 } from 'lucide-react'
-import { api, ApiError, type CatalogGroup, type PantryItem, type ParsedItem, type RecipeBrief } from '../lib/api'
+import { api, ApiError, type CatalogGroup, type DislikeReason, type PantryItem, type ParsedItem, type RecipeBrief } from '../lib/api'
 import { catMeta, DIFFICULTY, expiryInfo, formatQty } from '../lib/kitchen'
 import { emitDataChanged } from '../lib/motion'
 import { useToast } from './ui'
@@ -239,28 +239,72 @@ export function PantryAdder({ existing, onAdded, autoFocus = false }: {
 }
 
 // ---------------------------------------------------------- 菜谱卡片
-export function RecipeCard({ r, index = 0, tour }: { r: RecipeBrief; index?: number; tour?: string }) {
+const DISLIKE_REASONS: [DislikeReason, string, string][] = [
+  ['not_like', '不爱吃', '以后不再推荐这道'],
+  ['too_hard', '太麻烦', '排后面，多推省事的'],
+  ['recent', '最近吃过', '这几天先不推'],
+]
+
+/** 「不想吃」：选一个原因，Favor 记下来调整以后的推荐（第 5 期）。 */
+export function DislikeMenu({ onPick, compact = false }: { onPick: (reason: DislikeReason) => void; compact?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', esc) }
+  }, [open])
+  return (
+    <div className={`dislike ${compact ? 'compact' : ''}`} ref={ref}>
+      <button type="button" className={compact ? 'icon-btn dislike-btn' : 'btn btn-ghost'} aria-label="不想吃这道" title="不想吃这道"
+        aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <ThumbsDown size={compact ? 15 : 16} />{!compact && '不想吃'}
+      </button>
+      {open && (
+        <div className="dislike-menu" role="menu">
+          <span className="dislike-q">为什么不想吃？</span>
+          {DISLIKE_REASONS.map(([k, label, hint]) => (
+            <button type="button" role="menuitem" key={k} onClick={() => { setOpen(false); onPick(k) }}>
+              <b>{label}</b><small>{hint}</small>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function RecipeCard({ r, index = 0, tour, onDislike }: {
+  r: RecipeBrief; index?: number; tour?: string; onDislike?: (r: RecipeBrief, reason: DislikeReason) => void
+}) {
   const ready = r.missing.length === 0
   return (
-    <Link to={`/app/recipe/${r.id}`} className="card lift recipe-card" data-tour={tour} style={{ '--i': index } as CSSProperties}>
-      <div className="recipe-top">
-        <span className={`ready-tag ${ready ? 'ok' : 'miss'}`}>
-          {ready ? <><Check size={12} strokeWidth={3} />现在就能做</> : <><ShoppingBasket size={12} />还缺 {r.missing.length} 样</>}
-        </span>
-        {r.uses_expiring.length > 0 && <span className="save-tag"><Leaf size={12} />用掉快过期的</span>}
-      </div>
-      <h3>{r.title}</h3>
-      {r.summary && <p className="recipe-sum">{r.summary}</p>}
-      <div className="recipe-meta">
-        <span><Clock size={13} />{r.minutes} 分钟</span>
-        <span>{DIFFICULTY[r.difficulty] ?? '简单'}</span>
-        {r.kcal_per_serving ? <span><Flame size={13} />约 {r.kcal_per_serving} kcal</span> : null}
-      </div>
-      {!ready && <p className="recipe-miss"><CircleAlert size={13} />缺：{r.missing.join('、')}</p>}
-      {ready && r.uses_expiring.length > 0 && <p className="recipe-save"><Leaf size={13} />顺手用掉：{r.uses_expiring.join('、')}</p>}
-      {r.fit?.map(f => <p className="recipe-fit" key={f}><Clock size={13} />{f}</p>)}
-      {r.stripped?.length ? <p className="recipe-stripped"><Check size={13} />已去掉你不吃的{r.stripped.join('、')}</p> : null}
-    </Link>
+    // 「不想吃」按钮放在链接外面（链接里不能再嵌按钮），用定位叠在卡片右上角
+    <div className="recipe-card-wrap" style={{ '--i': index } as CSSProperties}>
+      <Link to={`/app/recipe/${r.id}`} className="card lift recipe-card" data-tour={tour} style={{ '--i': index } as CSSProperties}>
+        <div className="recipe-top">
+          <span className={`ready-tag ${ready ? 'ok' : 'miss'}`}>
+            {ready ? <><Check size={12} strokeWidth={3} />现在就能做</> : <><ShoppingBasket size={12} />还缺 {r.missing.length} 样</>}
+          </span>
+          {r.uses_expiring.length > 0 && <span className="save-tag"><Leaf size={12} />用掉快过期的</span>}
+        </div>
+        <h3>{r.title}</h3>
+        {r.summary && <p className="recipe-sum">{r.summary}</p>}
+        <div className="recipe-meta">
+          <span><Clock size={13} />{r.minutes} 分钟</span>
+          <span>{DIFFICULTY[r.difficulty] ?? '简单'}</span>
+          {r.kcal_per_serving ? <span><Flame size={13} />约 {r.kcal_per_serving} kcal</span> : null}
+        </div>
+        {!ready && <p className="recipe-miss"><CircleAlert size={13} />缺：{r.missing.join('、')}</p>}
+        {ready && r.uses_expiring.length > 0 && <p className="recipe-save"><Leaf size={13} />顺手用掉：{r.uses_expiring.join('、')}</p>}
+        {r.fit?.map(f => <p className="recipe-fit" key={f}><Info size={13} />{f}</p>)}
+        {r.stripped?.length ? <p className="recipe-stripped"><Check size={13} />已去掉你不吃的{r.stripped.join('、')}</p> : null}
+      </Link>
+      {onDislike && <DislikeMenu compact onPick={reason => onDislike(r, reason)} />}
+    </div>
   )
 }
 

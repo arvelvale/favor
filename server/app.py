@@ -14,6 +14,7 @@ import health
 import kitchen
 import onboarding
 import photo
+import taste
 import prefs
 from agent import runner
 from config import Settings, logger
@@ -444,6 +445,15 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
                                     "storage_label": kitchen.STORAGES[clean["storage"]]})
         return jsonify({"items": preview})
 
+    @app.post("/api/pantry/review")
+    @login_required
+    def review_pantry():
+        """清点过期食材：[{id, action: keep/used/discarded}]。"""
+        conn = get_db()
+        done = kitchen.review_items(conn, g.user["id"], body().get("items"), local_now().date())
+        conn.commit()
+        return jsonify(done)
+
     @app.post("/api/pantry/photo")
     @login_required
     def photo_pantry():
@@ -511,6 +521,39 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
     def recipe_detail(recipe_id):
         recipe = kitchen.recipe_payload(get_db(), g.user["id"], recipe_id, local_now().date())
         return jsonify({"recipe": recipe}) if recipe else error("菜谱不存在", 404)
+
+    @app.post("/api/recipes/<int:recipe_id>/opened")
+    @login_required
+    def recipe_opened(recipe_id):
+        """打开过一道菜（口味信号 + 新手引导第 2 步）。重复调用无副作用。"""
+        conn = get_db()
+        if not taste.record_open(conn, g.user["id"], recipe_id, local_now()):
+            return error("菜谱不存在", 404)
+        conn.commit()
+        return jsonify({"ok": True})
+
+    @app.post("/api/recipes/<int:recipe_id>/dislike")
+    @login_required
+    def recipe_dislike(recipe_id):
+        conn = get_db()
+        result = taste.dislike(conn, g.user["id"], recipe_id, body().get("reason"), local_now())
+        if result is None:
+            return error("菜谱不存在", 404)
+        conn.commit()
+        return jsonify(result)
+
+    @app.get("/api/taste")
+    @login_required
+    def get_taste():
+        return jsonify(taste.summary(get_db(), g.user["id"], local_now()))
+
+    @app.post("/api/taste/forget")
+    @login_required
+    def forget_taste():
+        conn = get_db()
+        n = taste.forget(conn, g.user["id"], str(body().get("title") or ""))
+        conn.commit()
+        return jsonify({"removed": n, **taste.summary(conn, g.user["id"], local_now())})
 
     @app.post("/api/recipes/<int:recipe_id>/save")
     @login_required
