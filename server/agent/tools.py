@@ -19,6 +19,7 @@ class ToolContext:
     now: datetime  # 用户本地时间
     images: object = None      # ImageService；未配置生图时为 None，生图工具对模型不可见
     images_this_turn: int = 0  # 每轮对话最多生成 1 张，控制费用
+    citations_this_turn: int = 0  # 本轮已发出的资料编号数，多次检索时编号接着排
 
     @property
     def today(self) -> date:
@@ -271,6 +272,11 @@ def search_nutrition(ctx, args):
     if not query:
         return {"ok": False, "error": "查询内容为空"}, []
     hits = rag_retriever.search(query)
+    # 检索器每次都从 [1] 编号；同一轮第二次检索要接着上一批往后排，
+    # 否则回答里的 [1] 会同时对应两条出处，引用自检也分不清。
+    offset = ctx.citations_this_turn
+    hits = [{**hit, "citation": offset + i} for i, hit in enumerate(hits, start=1)]
+    ctx.citations_this_turn += len(hits)
     # 给模型：带 [n] 编号的资料 + 引用规则（无命中时是拒答约束）
     context = rag_prompts.build_rag_context(hits, query=query)
     # 给前端：引用卡片数据（阶段 2 渲染），同时把编号清单回传给模型便于核对
