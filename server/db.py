@@ -143,6 +143,16 @@ CREATE TABLE IF NOT EXISTS user_prefs (
     skipped    TEXT    NOT NULL DEFAULT '[]',
     updated_at TEXT    NOT NULL DEFAULT (datetime('now'))
 );
+
+-- 新手引导。步骤进度从真实数据推导（见 onboarding.py），这里只存推导不出来的
+CREATE TABLE IF NOT EXISTS onboarding (
+    user_id             INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    tour                TEXT    NOT NULL DEFAULT 'active',
+    opened_recipe       INTEGER NOT NULL DEFAULT 0,
+    checklist_dismissed INTEGER NOT NULL DEFAULT 0,
+    tips_seen           TEXT    NOT NULL DEFAULT '[]',
+    updated_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+);
 """
 
 

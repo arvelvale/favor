@@ -1032,3 +1032,87 @@ a.image-frame:hover img.in { transform: scale(1.03); }
   .me-head { flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) { .q-card { animation: none; } }
+
+/* ------------------------------------------------------------ 新手引导（聚焦层、提示条、完成提示）、上手清单、情境提示 */
+.tour-dim { position: fixed; inset: 0; z-index: 50; background: rgba(20, 30, 45, .52); animation: fade .25s ease; }
+.tour-ring { position: fixed; z-index: 51; border-radius: 16px; pointer-events: none;
+  box-shadow: 0 0 0 3px var(--brand), 0 0 0 9px rgba(255, 107, 53, .22);
+  transition: left .25s var(--ease), top .25s var(--ease), width .25s var(--ease), height .25s var(--ease);
+  animation: tour-pulse 2.2s ease-in-out infinite; }
+@keyframes tour-pulse { 50% { box-shadow: 0 0 0 3px var(--brand), 0 0 0 14px rgba(255, 107, 53, .08); } }
+.tour-bubble { position: fixed; z-index: 52; background: var(--surface); border-radius: 18px; padding: 16px 18px 14px;
+  box-shadow: var(--shadow-pop); animation: q-in .3s var(--ease) both; }
+.tour-bubble b { display: block; font-size: 16px; font-weight: 600; color: var(--ink); margin: 8px 0 4px; }
+.tour-bubble p { margin: 0; font-size: 13.5px; line-height: 1.65; color: var(--ink-2); }
+.tour-bubble.compact { padding: 12px 16px; }
+.tour-bubble.compact b { margin-bottom: 0; }
+.tour-bubble-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tour-step { font-size: 12px; color: var(--brand-700); background: var(--brand-soft); border-radius: 99px; padding: 2px 9px; }
+.tour-skip { border: none; background: none; color: var(--ink-3); font-size: 12.5px; cursor: pointer; padding: 4px; }
+.tour-skip:hover { color: var(--ink); }
+.tour-dots { display: flex; gap: 5px; margin-top: 12px; }
+.tour-dots i { width: 18px; height: 4px; border-radius: 99px; background: var(--surface-3); }
+.tour-dots i.done { background: var(--brand-tint); }
+.tour-dots i.now { background: var(--brand); }
+.tour-bubble.compact .tour-dots { display: none; }
+
+.tour-pill { position: fixed; z-index: 40; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 6px 6px 8px; box-shadow: var(--shadow-pop);
+  max-width: calc(100vw - 32px); animation: fade .25s ease; }
+.tour-pill > .num { font-size: 12px; color: var(--brand-700); background: var(--brand-soft); border-radius: 99px; padding: 3px 9px; flex-shrink: 0; }
+.tour-pill b { font-weight: 500; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tour-pill .btn { height: 32px; padding: 0 12px; border-radius: 99px; flex-shrink: 0; }
+
+.tour-finish { position: fixed; z-index: 40; right: 24px; bottom: 24px; width: min(380px, calc(100vw - 32px)); display: flex; gap: 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; box-shadow: var(--shadow-pop); animation: q-in .35s var(--ease) both; }
+.tour-finish-ico { width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; color: var(--brand); background: var(--brand-soft); }
+.tour-finish b { font-weight: 600; font-size: 15px; }
+.tour-finish p { margin: 4px 0 12px; font-size: 13px; line-height: 1.65; color: var(--ink-2); }
+.tour-finish-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.ov > .tip-banner, .ov > .checklist-card { order: -2; }
+.fridge-tip:empty { display: none; }
+.fridge-tip { margin-bottom: 14px; }
+.checklist-card { padding: 16px 18px; }
+.checklist-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.checklist-head h2 { font-size: 15px; font-weight: 600; margin: 0 0 8px; }
+.checklist-head h2 .num { color: var(--brand-700); margin-left: 4px; }
+.checklist-bar { width: 220px; max-width: 50vw; height: 5px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.checklist-bar i { display: block; height: 100%; background: var(--grad-sunrise); border-radius: 99px; transition: width .5s var(--ease); }
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.checklist button { width: 100%; height: 100%; display: flex; align-items: center; gap: 8px; text-align: left; padding: 10px 12px;
+  border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-size: 13px; cursor: pointer; transition: border-color .2s, background .2s; }
+.checklist button:hover:not(:disabled) { border-color: var(--brand); }
+.checklist button:disabled { cursor: default; }
+.checklist .ck { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-size: 11.5px;
+  border: 1.5px solid var(--line-strong); color: var(--ink-3); }
+.checklist .lbl { flex: 1; min-width: 0; line-height: 1.4; }
+.checklist .go { color: var(--brand); flex-shrink: 0; }
+.checklist li.done button { background: var(--surface-2); color: var(--ink-3); }
+.checklist li.done .lbl { text-decoration: line-through; text-decoration-color: var(--line-strong); }
+.checklist li.done .ck { background: var(--good); border-color: var(--good); color: #fff; }
+.checklist li.next button { border-color: var(--brand-tint); background: var(--brand-soft); color: var(--brand-700); font-weight: 500; }
+.checklist li.next .ck { border-color: var(--brand); color: var(--brand); }
+@container main (max-width: 860px) { .checklist { grid-template-columns: minmax(0, 1fr); } }
+
+.tip-banner { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px;
+  background: color-mix(in srgb, var(--c) 7%, white); border: 1px solid color-mix(in srgb, var(--c) 22%, white); animation: q-in .35s var(--ease) both; }
+.tip-ico { width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0; display: grid; place-items: center; color: var(--c); background: var(--surface); }
+.tip-banner p { flex: 1; min-width: 0; margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--ink); }
+.tip-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.tip-actions .btn { height: 34px; padding: 0 12px; }
+.flash { animation: flash 1.2s ease; }
+@keyframes flash { 30% { box-shadow: 0 0 0 4px var(--brand-tint); } }
+
+@media (max-width: 860px) {
+  .tour-pill, .tour-finish { bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .tour-finish { right: 16px; }
+}
+@media (max-width: 560px) {
+  .tip-banner { flex-wrap: wrap; }
+  .tip-actions { margin-left: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-dim, .tour-bubble, .tour-pill, .tour-finish, .tip-banner { animation: none; }
+  .tour-ring { animation: none; transition: none; }
+}

@@ -12,6 +12,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import health
 import kitchen
+import onboarding
 import prefs
 from agent import runner
 from config import Settings, logger
@@ -165,6 +166,24 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
         profile = health.get_profile(conn, user_id)
         return data | {"allergies": prefs.allergy_list(profile), "servings": prefs.servings(data["prefs"]),
                        "health_in_nav": prefs.health_in_nav(data["prefs"])}
+
+    # ------------------------------------------------------------ 新手引导
+
+    @app.get("/api/onboarding")
+    @login_required
+    def get_onboarding():
+        conn = get_db()
+        data = onboarding.state(conn, g.user["id"], local_now().date())
+        conn.commit()  # 第一次读取会建行
+        return jsonify(data)
+
+    @app.post("/api/onboarding")
+    @login_required
+    def post_onboarding():
+        conn = get_db()
+        data = onboarding.update(conn, g.user["id"], body(), local_now().date())
+        conn.commit()
+        return jsonify(data)
 
     @app.get("/api/preferences")
     @login_required

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { api, setUnauthorizedHandler, type User } from './lib/api'
 import { clearPrefsCache } from './lib/prefs'
+import { clearOnboardingCache } from './lib/onboarding'
 import Workbench from './components/Workbench'
 import { ToastProvider } from './components/ui'
 import LandingPage from './pages/Landing'
@@ -44,6 +45,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await api.post('/api/auth/logout').catch(() => undefined)
     clearPrefsCache()
+    clearOnboardingCache()
     setUser(null)
   }, [])
 

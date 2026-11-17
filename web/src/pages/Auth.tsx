@@ -5,6 +5,7 @@ import Logo from '../components/Logo'
 import { api, ApiError, type User } from '../lib/api'
 import { useAuth } from '../App'
 import { clearPrefsCache } from '../lib/prefs'
+import { clearOnboardingCache } from '../lib/onboarding'
 
 const FEATS = [
   { icon: MessageCircleHeart, color: '#ff9a6b', title: '说一句就记好', text: '“午饭一碗牛肉面”——热量和营养自动估算' },
@@ -30,6 +31,7 @@ export default function AuthPage({ initialMode = 'login' }: { initialMode?: 'log
       const url = mode === 'login' ? '/api/auth/login' : '/api/auth/register'
       const res = await api.post<{ user: User }>(url, { username, password, nickname })
       clearPrefsCache()
+      clearOnboardingCache()
       setUser(res.user)
       navigate('/app', { replace: true })
     } catch (e) {
