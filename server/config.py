@@ -40,6 +40,11 @@ class Settings:
         self.image_model = os.getenv("IMAGE_MODEL", "z-image-turbo").strip()
         self.image_size = os.getenv("IMAGE_SIZE", "1024*1024").strip()
         self.image_daily_limit = int(os.getenv("IMAGE_DAILY_LIMIT", "10"))
+        # 拍冰箱照片识别食材（百炼视觉模型，OpenAI 兼容接口，复用 DASHSCOPE_API_KEY）。不填密钥时前端不显示「拍一张」
+        self.vision_base_url = (os.getenv("VISION_BASE_URL") or "https://dashscope.aliyuncs.com/compatible-mode/v1").strip()
+        self.vision_model = (os.getenv("VISION_MODEL") or "qwen3-vl-plus").strip()
+        self.vision_timeout = float(os.getenv("VISION_TIMEOUT") or "60")
+        self.vision_daily_limit = max(1, int(os.getenv("VISION_DAILY_LIMIT") or "20"))
         # 每人每天最多推荐几批菜谱（每批一次模型调用），控制费用
         self.recipe_daily_limit = max(1, int(os.getenv("RECIPE_DAILY_LIMIT") or "20"))
 
@@ -59,6 +64,10 @@ class Settings:
 
     @property
     def image_enabled(self) -> bool:
+        return bool(self.image_api_key)
+
+    @property
+    def vision_enabled(self) -> bool:
         return bool(self.image_api_key)
 
     @property

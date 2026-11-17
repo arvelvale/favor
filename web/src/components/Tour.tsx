@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, Check, HeartPulse, Sparkles, X } from 'lucide-react'
 import { updateOnboarding, useOnboarding, type TourStep } from '../lib/onboarding'
+import { useAuth } from '../App'
 
 /**
  * 聚焦式新手引导：每一步只高亮一个要操作的区域，其余变暗且点不到；
@@ -9,12 +10,14 @@ import { updateOnboarding, useOnboarding, type TourStep } from '../lib/onboardin
  * 目标元素用 data-tour 标记；当前页面找不到目标时，退成一个「带我去」的小提示条。
  */
 
-interface Target { sel: string; title: string; text: string }
+interface Target { sel: string; title: string; text: string; photoText?: string }
 const STEPS: Record<TourStep, { n: number; targets: Target[]; elsewhere: string; route: string }> = {
   pantry: {
     n: 1, route: '/app', elsewhere: '先告诉 Favor 冰箱里有什么',
     targets: [{ sel: '[data-tour="pantry"]', title: '先告诉 Favor 冰箱里有什么',
-      text: '勾几样常见的，或者直接说一句话，比如「有鸡蛋、番茄、半颗洋葱」。放够 3 样就行，数量和保质期都不用填。' }],
+      text: '勾几样常见的，或者直接说一句话，比如「有鸡蛋、番茄、半颗洋葱」。放够 3 样就行，数量和保质期都不用填。',
+      // 配了识图时换成这句（见下方 textFor）
+      photoText: '勾几样常见的、说一句话，或者点「拍一张」直接拍冰箱。放够 3 样就行，数量和保质期都不用填。' }],
   },
   recommend: {
     n: 2, route: '/app', elsewhere: '让 Favor 推荐几道菜',
@@ -49,6 +52,7 @@ function findTarget(targets: Target[]) {
 
 export default function Tour() {
   const ob = useOnboarding()
+  const { visionEnabled } = useAuth()
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const [rect, setRect] = useState<DOMRect | null>(null)
@@ -178,7 +182,7 @@ export default function Tour() {
           <button className="tour-skip" onClick={skip}>跳过引导</button>
         </div>
         <b>{found.title}</b>
-        {!compact && <p>{found.text}</p>}
+        {!compact && <p>{visionEnabled && found.photoText ? found.photoText : found.text}</p>}
         <div className="tour-dots" aria-hidden="true">
           {Array.from({ length: TOTAL }, (_, i) => <i key={i} className={i + 1 < step.n ? 'done' : i + 1 === step.n ? 'now' : ''} />)}
         </div>

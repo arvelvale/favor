@@ -144,6 +144,15 @@ CREATE TABLE IF NOT EXISTS user_prefs (
     updated_at TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
+-- 按次计费的调用（如拍照识别），用于每日限额
+CREATE TABLE IF NOT EXISTS usage_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT    NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_usage_user ON usage_log(user_id, kind, created_at);
+
 -- 新手引导。步骤进度从真实数据推导（见 onboarding.py），这里只存推导不出来的
 CREATE TABLE IF NOT EXISTS onboarding (
     user_id             INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,

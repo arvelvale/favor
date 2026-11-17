@@ -22,6 +22,8 @@ import WelcomePage from './pages/Welcome'
 interface AuthState {
   user: User | null
   llmEnabled: boolean
+  /** 服务端配了视觉模型：录入时显示「拍一张」 */
+  visionEnabled: boolean
   setUser: (u: User | null) => void
   logout: () => Promise<void>
 }
@@ -32,13 +34,14 @@ export const useAuth = () => useContext(AuthContext)
 function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [llmEnabled, setLlmEnabled] = useState(true)
+  const [visionEnabled, setVisionEnabled] = useState(false)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
     setUnauthorizedHandler(() => setUser(null))
     Promise.allSettled([
       api.get<{ user: User }>('/api/auth/me').then(r => setUser(r.user)),
-      api.get<{ llm_enabled: boolean }>('/api/meta').then(r => setLlmEnabled(r.llm_enabled)),
+      api.get<{ llm_enabled: boolean; vision_enabled?: boolean }>('/api/meta').then(r => { setLlmEnabled(r.llm_enabled); setVisionEnabled(!!r.vision_enabled) }),
     ]).finally(() => setReady(true))
   }, [])
 
@@ -50,7 +53,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   if (!ready) return <div className="loading-screen">正在加载…</div>
-  return <AuthContext.Provider value={{ user, llmEnabled, setUser, logout }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, llmEnabled, visionEnabled, setUser, logout }}>{children}</AuthContext.Provider>
 }
 
 function Protected({ children, questionnaire = false }: { children: ReactNode; questionnaire?: boolean }) {
