@@ -127,10 +127,40 @@ class PhotoApiTests(unittest.TestCase):
 
     def test_disabled_and_login(self):
         c = self.make(None)
-        self.assertFalse(c.get("/api/meta").get_json()["vision_enabled"])
+        meta = c.get("/api/meta").get_json()
+        self.assertFalse(meta["vision_enabled"])
+        self.assertIsNone(meta["vision_model"])
         self.assertEqual(c.post("/api/pantry/photo", json={"image": data_url(JPEG)}).status_code, 400)
         c.post("/api/auth/logout", json={})
         self.assertEqual(c.post("/api/pantry/photo", json={"image": data_url(JPEG)}).status_code, 401)
+
+    def test_deepseek_defaults_and_override(self):
+        from app import create_app
+        with tempfile.TemporaryDirectory() as tmp:
+            s = make_settings(tmp, LLM_API_KEY="ds-" + "x" * 20)
+            self.assertTrue(s.vision_enabled)
+            self.assertEqual(s.vision_api_key, s.llm_api_key)
+            self.assertEqual(s.vision_base_url, "https://api.deepseek.com")
+            self.assertEqual(s.vision_model, "deepseek-flash")
+            meta = create_app(s).test_client().get("/api/meta").get_json()
+            self.assertTrue(meta["vision_enabled"])
+            self.assertEqual(meta["vision_model"], "deepseek-flash")
+
+            # 仅配置旧变量 DEEPSEEK_API_KEY 也能自动启用
+            legacy = make_settings(tmp, DEEPSEEK_API_KEY="ds-" + "y" * 20)
+            self.assertTrue(legacy.vision_enabled)
+            self.assertEqual(legacy.vision_model, "deepseek-flash")
+
+            # 显式 VISION_* 变量优先覆盖
+            custom = make_settings(tmp, VISION_API_KEY="vk-" + "z" * 20,
+                                   VISION_BASE_URL="https://example.com/v1", VISION_MODEL="custom-vl")
+            self.assertTrue(custom.vision_enabled)
+            self.assertEqual(custom.vision_api_key, "vk-" + "z" * 20)
+            self.assertEqual(custom.vision_base_url, "https://example.com/v1")
+            self.assertEqual(custom.vision_model, "custom-vl")
+
+            # 只配百炼 key 不再自动启用识图
+            self.assertFalse(make_settings(tmp, DASHSCOPE_API_KEY="d" * 20).vision_enabled)
 
 
 if __name__ == "__main__":

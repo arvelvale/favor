@@ -7,9 +7,11 @@ import { emitDataChanged, useDataChanged } from '../lib/motion'
 import { Modal, useToast } from '../components/ui'
 import { CatDot, ExpiryPill, PantryAdder } from '../components/Kitchen'
 import { TipBanner } from '../components/Onboarding'
+import { useAuth } from '../App'
 
 export default function FridgePage() {
   const toast = useToast()
+  const { visionEnabled } = useAuth()
   const [params, setParams] = useSearchParams()
   const [items, setItems] = useState<PantryItem[] | null>(null)
   const [adding, setAdding] = useState(params.get('add') === '1')
@@ -67,7 +69,7 @@ export default function FridgePage() {
       {!items.length ? (
         <div className="card empty" style={{ padding: '48px 16px' }}>
           <Refrigerator size={40} />
-          <p>冰箱还是空的。点右上角「加食材」，选几样或者说一句话就行。</p>
+          <p>{visionEnabled ? '冰箱还是空的。点右上角「加食材」，拍一张冰箱、选几样或者说一句话就行。' : '冰箱还是空的。点右上角「加食材」，选几样或者说一句话就行。'}</p>
         </div>
       ) : (
         <div className="fridge-cols stagger">
