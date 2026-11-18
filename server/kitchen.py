@@ -129,6 +129,17 @@ def is_staple(name: str, staples=DEFAULT_STAPLES) -> bool:
     return key in {normalize_name(s) for s in staples}
 
 
+# 小料：缺了也能做（不计入缺料）。只收调味小料，主料、主食不在此列
+GARNISHES = ("小米辣", "辣椒", "干辣椒", "辣椒面", "辣椒粉", "花椒", "葱", "小葱", "大葱", "葱花", "香葱", "姜", "生姜",
+             "蒜", "大蒜", "蒜末", "香菜", "芝麻", "白芝麻", "八角", "桂皮", "香叶", "孜然", "五香粉", "胡椒粉", "白胡椒粉")
+
+
+def is_garnish(name: str) -> bool:
+    n = normalize_name(name)
+    # 只认明确的小料清单。豆瓣酱、蚝油这类酱料决定菜的味道（回锅肉没有豆瓣酱就不是回锅肉），缺了仍算缺料
+    return n in {normalize_name(g) for g in GARNISHES}
+
+
 def names_match(a: str, b: str) -> bool:
     """菜谱用料与库存名是否指同一样东西：统一写法后相等，或一方（≥2 字）包含另一方。"""
     x, y = normalize_name(a), normalize_name(b)
@@ -261,7 +272,9 @@ def add_items(conn, user_id: int, raw_items: list, today: date, source: str = "m
                 (user_id, item["name"], item["category"], item["quantity"], item["unit"], item["storage"],
                  item["expires_on"], item["expires_estimated"], source))
             item_id = cur.lastrowid
-        out.append(get_item(conn, user_id, item_id, today))
+        # merged：和冰箱里已有的同一样合并了（数量可能相加）。对话工具靠它如实告诉模型「新放的」还是「加到原有的」，
+        # 否则真实模型会自己编「之前那盒」「现在有 4 根」（2026-11-18 真实模型实测发现）
+        out.append(get_item(conn, user_id, item_id, today) | {"merged": existing is not None})
     return out
 
 
@@ -409,7 +422,8 @@ RECIPE_PROMPT = """你是做家常菜很在行的朋友，根据用户冰箱里�
 3. 3 道菜要有区别（做法或主料不同），优先家常、步骤清楚、新手也能做成。
 4. 过敏原和用户不吃的东西绝对不能出现在用料里。
 5. 步骤写清火候和时间（如「中火炒 2 分钟」），每步一句话，4–8 步。
-6. 份量、口味、厨具、时间按「用户情况」来；用户补充的要求优先。"""
+6. 份量、口味、厨具、时间按「用户情况」来；用户补充的要求优先。
+7. 冰箱里没有的辣椒、葱姜蒜、香菜等小料，optional 一律为 true；口味偏好（如微辣）不要变成必需的配料。"""
 
 
 def _llm_json(client, model: str, system: str, user: str, max_tokens: int = 4000) -> dict:
@@ -476,6 +490,11 @@ def annotate(recipe: dict, pantry: list[dict], staples=DEFAULT_STAPLES) -> dict:
                     expiring.append(hit["name"])
         else:
             ing["status"] = "missing"
+            if not ing["optional"] and is_garnish(ing["name"]):
+                # 辣椒、葱姜蒜、香菜这类小料：冰箱里没有也能做，不让它挡住「现在就能做」。
+                # 真实模型常把「微辣」偏好写成必需的小米辣，导致 3 道菜全显示「还缺 1 样」（2026-11-18 实测）
+                ing["optional"] = True
+                ing["auto_optional"] = True
             if not ing["optional"]:
                 missing.append(ing["name"])
     recipe["missing"] = missing

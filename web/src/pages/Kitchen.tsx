@@ -14,7 +14,7 @@ const THINKING = ['正在翻冰箱…', '看看哪些快过期了…', '挑几�
 
 export default function KitchenPage() {
   const toast = useToast()
-  const { llmEnabled } = useAuth()
+  const { llmEnabled, visionEnabled } = useAuth()
   const prefs = usePrefs()
   // 问卷 Q7 选了「食材总放坏」：快过期的放在首页最前面
   const wasteFirst = !!prefs?.prefs.goals.includes('waste')
@@ -79,7 +79,7 @@ export default function KitchenPage() {
           <div className="hero-copy">
             <span className="hero-kicker"><Refrigerator size={14} />第一步</span>
             <h2>先告诉 Favor，冰箱里有什么</h2>
-            <p>选几样常见的，或者直接说一句话。不用填数量，也不用记保质期。</p>
+            <p>{visionEnabled ? '拍一张冰箱、选几样常见的，或者直接说一句话。不用填数量，也不用记保质期。' : '选几样常见的，或者直接说一句话。不用填数量，也不用记保质期。'}</p>
           </div>
           <div data-tour="pantry"><PantryAdder existing={pantry} onAdded={load} /></div>
         </section>

@@ -26,7 +26,7 @@
 
 ## 功能
 
-- **三种录入**：勾选常见食材、说一句话（「有 6 个鸡蛋、半颗洋葱」）、拍冰箱照片（百炼视觉模型）。识别结果都先给用户确认再入库；照片只用来识别，不保存。数量选填，保质期按食材和存放位置估算。
+- **三种录入**：勾选常见食材、说一句话（「有 6 个鸡蛋、半颗洋葱」）、拍冰箱照片（DeepSeek 视觉模型）。识别结果都先给用户确认再入库；照片只用来识别，不保存。数量选填，保质期按食材和存放位置估算。
 - **推荐**：菜谱由 AI 生成，但缺料、用到的临期食材、过敏原、厨具、饮食方式都由服务端对照库存和问卷重新校验；排序规则写死在 `kitchen.rank_key` 并有测试。
 - **问卷**：每一题都改变一个看得见的行为（份量、难度、时间、厨具硬过滤、常备调料、忌口、排序、健康入口位置）。
 - **做好了**：按数量或分类建议扣减，确认后扣库存并按吃了几份记一餐。
@@ -41,8 +41,8 @@
 | 前端 | React 18 + TypeScript + Vite，React Router，lucide 图标，手写 SVG 图表，容器查询布局，Poppins（自托管拉丁子集） |
 | 后端 | Flask 3，SQLite（零配置），会话 Cookie 鉴权 |
 | Agent | OpenAI 兼容接口的 function calling（默认 DeepSeek V4.1 Flash `deepseek-flash`），SSE 流式输出 |
-| 菜品配图 | 阿里云百炼 `multimodal-generation`（默认 `z-image-turbo`，可换 `qwen-image-3.0`），后台生成、下载到本地、仅本人可见 |
-| 拍照识别 | 阿里云百炼视觉模型（OpenAI 兼容接口，默认 `qwen3-vl-plus`），复用 `DASHSCOPE_API_KEY` |
+| 菜品配图 | 默认 MiniMax `image-01`（配了 `MINIMAX_API_KEY` 时），否则阿里云百炼 `multimodal-generation`（`z-image-turbo`）；后台生成、存到本地、仅本人可见 |
+| 拍照识别 | DeepSeek 视觉模型（OpenAI 兼容接口，默认 `deepseek-flash`），默认复用 `LLM_API_KEY` |
 
 ```
 server/            Flask API
@@ -83,10 +83,10 @@ npm run dev             # http://localhost:5173
 
 不配置 `LLM_API_KEY` 时应用照常运行，只是对话和菜谱推荐不可用；冰箱管理、手动记录、趋势、档案均可使用。
 
-配置 `DASHSCOPE_API_KEY` 后，Favor 给出菜谱或搭配建议时会为主菜生成一张成品示意图：每轮最多 1 张、每人每天默认 10 张（`IMAGE_DAILY_LIMIT`），
+配置 `MINIMAX_API_KEY`（优先）或 `DASHSCOPE_API_KEY` 后，Favor 给出菜谱或搭配建议时会为主菜生成一张成品示意图：每轮最多 1 张、每人每天默认 10 张（`IMAGE_DAILY_LIMIT`），
 失败（欠费、审核未通过等）会在卡片里给出原因且不计入额度。百炼返回的图片链接 24 小时失效，所以服务端会立即下载保存到 `server/data/images/`。
 
-同一个 `DASHSCOPE_API_KEY` 也用于拍照识别食材（`VISION_MODEL`，默认 `qwen3-vl-plus`）：每人每天默认 20 次（`VISION_DAILY_LIMIT`，失败也计入，防止反复重试刷费用）。
+拍照识别食材复用 DeepSeek 密钥 `LLM_API_KEY`（也可用 `VISION_API_KEY` / `VISION_BASE_URL` / `VISION_MODEL` 单独指定，默认 `deepseek-flash`）：每人每天默认 20 次（`VISION_DAILY_LIMIT`，失败也计入，防止反复重试刷费用）。
 浏览器先把照片压到长边 1280px 再上传；这个接口单独放宽请求体上限，其他接口仍是 256KB。
 
 ## 目标计算

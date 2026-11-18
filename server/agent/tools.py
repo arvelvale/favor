@@ -249,10 +249,12 @@ def check_habit(ctx, args):
 
 
 @tool("generate_food_image",
-      "为你推荐的菜品生成一张成品示意图（阿里云百炼生图，后台生成，用户会在卡片里看到）。"
+      "为你推荐的菜品生成一张成品示意图（后台生成，用户会在卡片里看到）。"
       "只在给出具体菜谱或一餐搭配建议、或用户明确想看图时调用；记录类消息不要调用；每轮最多一次。",
       {"title": {"type": "string", "description": "菜名，不超过 15 字，如 香煎鸡胸配西兰花"},
-       "description": {"type": "string", "description": "画面里的菜品与摆盘，中文具体描述食材、颜色、份量，不写风格词"}},
+       "description": {"type": "string", "description":
+                       "画面描述，用英文写（生图模型对英文理解准得多，中文菜名常被画错）：菜的英文名或拼音、"
+                       "主料的形状颜色质感、份量摆盘；容易画错的写明没有什么（如 no noodles, no meat）。不写风格词"}},
       ["title", "description"])
 def generate_food_image(ctx, args):
     if ctx.images is None:
@@ -338,7 +340,13 @@ def list_pantry(ctx, args):
       {"items": {"type": "array", "items": PANTRY_ITEM}}, ["items"])
 def add_pantry_items(ctx, args):
     items = kitchen.add_items(ctx.conn, ctx.user_id, args.get("items"), ctx.today, source="agent")
-    return ({"ok": True, "saved": _pantry_brief(items)},
+    added = [kitchen.describe_item(i) for i in items if not i["merged"]]
+    merged = [kitchen.describe_item(i) for i in items if i["merged"]]
+    return ({"ok": True,
+             "newly_added": added,  # 之前冰箱里没有，这次新放进去的（括号里是现在的数量和剩余天数）
+             "merged_into_existing": merged,  # 冰箱里本来就有、这次合并后的总量
+             "note_for_reply": "只按上面两项如实告诉用户放进去了什么；newly_added 里的东西之前冰箱里没有，"
+                               "不要说「之前那盒」「原来的」，也不要自己推算总数。"},
             [{"type": "pantry", "action": "added", "names": [i["name"] for i in items]}])
 
 

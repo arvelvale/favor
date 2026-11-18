@@ -21,7 +21,7 @@ from config import Settings, logger
 from rag import retriever as rag_retriever
 from db import close_db, connect, get_db, init_db
 from health import ValidationError
-from images import DashScopeImageClient, ImageService, public_image
+from images import DashScopeImageClient, ImageService, MiniMaxImageClient, public_image
 
 
 def create_app(settings: Settings | None = None, llm_client=None, image_client=None, images_async: bool = True,
@@ -54,14 +54,17 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
     def get_llm():
         return llm_client
 
-    # 拍照识别食材：百炼视觉模型（OpenAI 兼容接口）。没配密钥且没注入客户端时为 None
+    # 拍照识别食材：DeepSeek 视觉模型（OpenAI 兼容接口）。没配密钥且没注入客户端时为 None
     if vision_client is None and settings.vision_enabled:
         from openai import OpenAI
-        vision_client = OpenAI(api_key=settings.image_api_key, base_url=settings.vision_base_url,
+        vision_client = OpenAI(api_key=settings.vision_api_key, base_url=settings.vision_base_url,
                                timeout=settings.vision_timeout, max_retries=1)
+        _ = vision_client.chat.completions
 
     # 菜品配图（阿里云百炼）。没配密钥且没注入客户端时为 None，agent 不会看到生图工具。
-    if image_client is None and settings.image_enabled:
+    if image_client is None and settings.image_backend == "minimax":
+        image_client = MiniMaxImageClient(settings.minimax_api_key, settings.minimax_base_url, settings.minimax_image_model)
+    elif image_client is None and settings.image_backend == "dashscope":
         image_client = DashScopeImageClient(settings.image_api_key, settings.image_base_url,
                                             settings.image_model, settings.image_size)
     image_service = (ImageService(image_client, settings.database_path, settings.database_path.parent / "images",
@@ -125,6 +128,7 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
         return jsonify({"llm_enabled": settings.llm_enabled, "model": settings.llm_model if settings.llm_enabled else None,
                         "image_enabled": image_service is not None,
                         "vision_enabled": vision_client is not None,
+                        "vision_model": settings.vision_model if vision_client is not None else None,
                         "rag_enabled": settings.rag_enabled and rag_retriever.is_enabled()})
 
     @app.post("/api/auth/register")
@@ -621,8 +625,10 @@ def create_app(settings: Settings | None = None, llm_client=None, image_client=N
             return send_from_directory(dist, path)
         return send_from_directory(dist, "index.html")
 
-    logger.info("Favor ready · db=%s · llm=%s", settings.database_path,
-                settings.llm_model if settings.llm_enabled else "disabled")
+    logger.info("Favor ready · db=%s · llm=%s · vision=%s · image=%s", settings.database_path,
+                settings.llm_model if settings.llm_enabled else "disabled",
+                settings.vision_model if vision_client is not None else "disabled",
+                type(image_client).__name__ if image_client is not None else "disabled")
     return app
 
 

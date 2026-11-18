@@ -3,7 +3,7 @@
 原则：
 - 照片只转给视觉模型识别，服务端不落盘、不入库，用完即丢
 - 识别结果只是预览，前端让用户确认（不确定的默认不勾）后再走 POST /api/pantry 入库，避免识别错误污染库存
-- 视觉模型走百炼 OpenAI 兼容接口（与对话模型同一套 SDK），每人每天限额控制费用
+- 视觉模型走 DeepSeek OpenAI 兼容接口（默认 deepseek-flash，复用对话密钥），每人每天限额控制费用
 """
 import base64
 import binascii
@@ -78,7 +78,7 @@ def recognize(conn, client, model: str | None, user_id: int, data_url, today: da
         messages=[{"role": "system", "content": PHOTO_PROMPT},
                   {"role": "user", "content": [{"type": "image_url", "image_url": {"url": url}},
                                                {"type": "text", "text": "这张照片里有哪些食材？"}]}],
-        response_format={"type": "json_object"}, temperature=0.2, max_tokens=2000, stream=False)
+        response_format={"type": "json_object"}, temperature=0.2, max_tokens=4000, stream=False)
     text = (resp.choices[0].message.content or "").strip()
     text = re.sub(r"^```(?:json)?|```$", "", text, flags=re.M).strip()
     data = json.loads(text)
